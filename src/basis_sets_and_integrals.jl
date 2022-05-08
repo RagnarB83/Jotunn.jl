@@ -170,7 +170,6 @@ function basis_set_create(basis,elems,coordinates; basisfile="none")
 
     #Use internal basis sets in GaussianBasis.jl
     else
-        println("Looking up basis-name in GaussianBasis.jl")
         #Using basis variable as basis-set name
         #TODO: coords_string fails if scientific notation present in number
         bset = BasisSet(basis, coords_string)
