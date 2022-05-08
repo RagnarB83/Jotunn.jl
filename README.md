@@ -64,7 +64,7 @@ export JULIA_LOAD_PATH=/path/to/Jotunn/src:$JULIA_LOAD_PATH
 
 *NOT YET READY...*
 
-
+#
 ### How to use:
 
 The primary Jotunn functions to use are **create_fragment** (a Jotunn molecule fragment object) and 
@@ -104,6 +104,7 @@ Run inputscript like this:
 julia test.jl
 ```
 
+### Example inputfiles:
 *Example inputfiles below can all be found in examples directory*
 
 See  See [GaussianBasis/lib directory](https://github.com/FermiQC/GaussianBasis.jl/tree/main/lib) for list of available basis-sets.
