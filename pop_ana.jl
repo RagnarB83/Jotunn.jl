@@ -1,5 +1,6 @@
 """
 Mulliken for closed-shells
+    
 """
 function mulliken(S,P,bset,elems)
     PS=P*S
