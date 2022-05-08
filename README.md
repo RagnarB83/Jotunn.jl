@@ -51,8 +51,8 @@ Might one day turn into something useful.
 
 #
 **Julia inputfile.jl:**
-```sh
-include("../jHF.jl")
+```julia
+include("/path/to/jHF.jl")
 
 # Create molecular fragments
 
@@ -68,7 +68,7 @@ energy= jHF(H2, "STO-3G")
 #More keywords
 energy= jHF(H2, "STO-3G"; maxiter=200, fock_algorithm="turbo", HFtype="RHF", levelshift=2.0, lshift_thresh=1e-4, tei_type="4c", print_final_matrices=true, debugprint=true)
 
-\#All features
+#All features
 energy = jHF(H2O, basisset="STO-3G"; HFtype="UHF", guess="hcore", basisfile="none", maxiter=200, 
     print_final_matrices=false, debugprint=false, 
     rmsDP_threshold=5e-9, maxDP_threshold=1e-7, energythreshold=1e-8, 
@@ -80,7 +80,7 @@ energy = jHF(H2O, basisset="STO-3G"; HFtype="UHF", guess="hcore", basisfile="non
 
  **Output:**
 
-```sh
+```text
 
 ==================================================
                    JOTUNN
