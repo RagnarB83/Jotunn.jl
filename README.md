@@ -5,18 +5,18 @@ Might one day turn into something useful.
 
 
 
-**Current features**
-- 1 and 2-electron integrals via GaussianBasis.jl and Libcint.
+## Current features
+- 1 and 2-electron integrals via [GaussianBasis.jl](https://github.com/FermiQC/GaussianBasis.jl) and [libcint](https://github.com/sunqm/libcint).
 - RHF and UHF algorithm with full 4-rank tensor. 
-- Fock matrix speed up via LoopVectorization
+- Fock matrix speed up via [LoopVectorization.jl](https://github.com/JuliaSIMD/LoopVectorization.jl)
 - Mulliken population analysis (RHF and UHF)
 - Mayer bond orders (RHF and UHF)
 - SCF convergence aids: levelshifting
 - Basis sets:
-    - Support for all internal basis sets in GaussianBasis.
+    - Support for all internal basis sets in [GaussianBasis.jl](https://github.com/FermiQC/GaussianBasis.jl).
     - Support for reading in external basis set in ORCA format.
 
-**Development: features to be added**
+## Development: features to be added
 - Improving speed: 
     - Support sparse 2-electron integrals
     - Density fitting
@@ -33,21 +33,21 @@ Might one day turn into something useful.
 - Direct SCF algorithm ?
 - Noncollinear HF/DFT
 
-**Development: bugs to be fixed **
+## Development: bugs to be fixed
 - Fix bug: GaussianBasis.jl sensitive to scientific notation in coordinates
 - Read-in basis set: Normalize contraction coefficients
 
-**Dependencies (not in Julia standard library):**
-- GaussianBasis.jl  (1 and 2-electron integrals)
-- Molecules.jl (helper program with GaussianBasis.jl)
-- LoopVectorization.jl (to speed up Fock matrix)
-- PrettyTables.jl
-- Crayons.jl
+## Dependencies (not in Julia standard library)
+- [GaussianBasis.jl](https://github.com/FermiQC/GaussianBasis.jl) (1 and 2-electron integrals)
+- [Molecules.jl](https://github.com/FermiQC/Molecules.jl) (helper program with GaussianBasis.jl)
+- [LoopVectorization.jl](https://github.com/JuliaSIMD/LoopVectorization.jl) (to speed up Fock matrix)
+- [PrettyTables.jl](https://github.com/ronisbr/PrettyTables.jl) (pretty output)
+- [Crayons.jl](https://github.com/KristofferC/Crayons.jl) (pretty output)
 
 
-**Documentation:**
+## Documentation:
 
-**Example:**
+### Example:
 
 #
 include("../jHF.jl")
