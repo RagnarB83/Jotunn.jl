@@ -54,7 +54,7 @@ Might one day turn into something useful.
 ```sh
 include("../jHF.jl")
 
-\# Create molecular fragments
+# Create molecular fragments
 
 H2 = create_fragment(coords_string="""
 H 0.0 0.0 0.0
@@ -62,10 +62,10 @@ H 0.0 0.0 0.74
 """, charge=0, mult=1)
 H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
 
-\#Simple call
+#Simple call
 energy= jHF(H2, "STO-3G")
 
-\#More keywords
+#More keywords
 energy= jHF(H2, "STO-3G"; maxiter=200, fock_algorithm="turbo", HFtype="RHF", levelshift=2.0, lshift_thresh=1e-4, tei_type="4c", print_final_matrices=true, debugprint=true)
 
 \#All features
@@ -105,7 +105,6 @@ Looking up basis-name in GaussianBasis.jl
 
 Calculating 1-electron integrals
 Calculating 2-electron integrals
-  2.041039 seconds (3.49 M allocations: 155.288 MiB, 4.26% gc time, 99.82% compilation time)
 Choosing Fock algorithm.
 Small system (Basis dim: 2). Choosing loop Fock.
 Providing guess for density matrix
@@ -123,6 +122,30 @@ CALCULATION SETUP
 
 Beginning SCF iterations
 
+==============================
+SCF iteration 1
+==============================
+Levelshift: true
+Iter: 1 P_RMS: 9999 (threshold to turn off levelshift:0.0001
+Level shift active. Adding levelshift: 2.0 in iteration 1
+Current energy: -1.586873896382793
+Energy change: -1.586873896382793 Eh (threshold: 1.0e-8)
+RMS-DP: 0.8825776863627137 (threshold: 5.0e-9)
+Max-DP: -0.018125080890486533 (threshold: 1.0e-7)
+
+==============================
+SCF iteration 2
+==============================
+Levelshift: true
+Iter: 2 P_RMS: 0.8825776863627137 (threshold to turn off levelshift:0.0001
+Level shift active. Adding levelshift: 2.0 in iteration 2
+Current energy: -0.8491820078453758
+Energy change: 0.7376918885374173 Eh (threshold: 1.0e-8)
+RMS-DP: 0.04745591704180255 (threshold: 5.0e-9)
+Max-DP: 0.07012163363267665 (threshold: 1.0e-7)
+
+...
+
 SCF converged in 14 iterations! Hell yeah! 🎉
 ┌──────────────────────┬────────────────┐
 │ Energy contributions │          E(Eh) │
@@ -137,8 +160,7 @@ SCF converged in 14 iterations! Hell yeah! 🎉
 ├──────────────────────┼────────────────┤
 │         Virial ratio │     1.92963559 │
 └──────────────────────┴────────────────┘
-  0.820469 seconds (776.32 k allocations: 41.955 MiB, 3.41% gc time, 76.26% compilation time)
-  0.016378 seconds (14.32 k allocations: 807.283 KiB, 99.74% compilation time)
+
 ------------------------------
 MO Energies (closed-shell)
 ------------------------------
@@ -149,7 +171,6 @@ MO Energies (closed-shell)
 │  1 │  2.0 │      -0.5786 │     -15.7433 │
 │  2 │  0.0 │       0.6711 │      18.2628 │
 └────┴──────┴──────────────┴──────────────┘
-  0.011117 seconds (9.48 k allocations: 552.631 KiB, 98.86% compilation time)
 
 
 Mulliken Population Analysis
@@ -161,8 +182,6 @@ Mulliken Population Analysis
 └──────┴─────────┴────────────┘
 
 Sum of charges: 0.0000
-  0.154539 seconds (265.43 k allocations: 14.903 MiB, 98.16% compilation time)
-  0.117040 seconds (7.99 k allocations: 300.141 KiB, 99.94% compilation time)
 
 Mayer bond orders (>0.01):
 ┌─────────┬────────┐
@@ -170,7 +189,6 @@ Mayer bond orders (>0.01):
 ├─────────┼────────┤
 │ H1 - H2 │ 1.0000 │
 └─────────┴────────┘
-  0.119578 seconds (123.70 k allocations: 6.427 MiB, 99.02% compilation time)
 
 FINAL RESULTS
 ====================== =================
