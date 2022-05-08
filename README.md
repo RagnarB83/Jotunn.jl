@@ -156,6 +156,15 @@ Max-DP: 0.07012163363267665 (threshold: 1.0e-7)
 
 ...
 
+==============================
+SCF iteration 14
+==============================
+Levelshift: false
+Current energy: -1.1167593078220257
+Energy change: 0.0 Eh (threshold: 1.0e-8)
+RMS-DP: 4.1331225358956274e-9 (threshold: 5.0e-9)
+Max-DP: 5.845118056235776e-9 (threshold: 1.0e-7)
+
 SCF converged in 14 iterations! Hell yeah! 🎉
 ┌──────────────────────┬────────────────┐
 │ Energy contributions │          E(Eh) │
