@@ -63,6 +63,9 @@ export JULIA_LOAD_PATH=/path/to/Jotunn/src:$JULIA_LOAD_PATH
 
 ### How to use:
 
+The primary Jotunn functions to use are **create_fragment** (a Jotunn molecule fragment object) and 
+**jHF** (the Jotunn RHF/UHF code).
+
 *Option 1: 
 Launch an interactive julia session:*
 ```sh
