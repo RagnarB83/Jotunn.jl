@@ -50,7 +50,7 @@ Might one day turn into something useful.
 ### Example:
 
 #
-**inputfile1.jl:**
+**simple-input.jl:**
 ```julia
 include("/path/to/jHF.jl")
 
@@ -64,7 +64,7 @@ H 0.0 0.0 0.74
 #Simple call
 energy= jHF(H2, "STO-3G")
  ```
-**inputfile2.jl:**
+**moreoptions-input.jl:**
  ```julia
 include("/path/to/jHF.jl")
 H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
@@ -75,7 +75,7 @@ energy= jHF(H2, "STO-3G"; maxiter=200, fock_algorithm="turbo",
     print_final_matrices=true, debugprint=true)
  ```
 
-**inputfile3.jl:**
+**alloptions-input.jl:**
  ```julia
 include("/path/to/jHF.jl")
 H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
