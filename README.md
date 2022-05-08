@@ -103,7 +103,7 @@ Run inputscript like this:
 ```sh
 julia test.jl
 ```
-
+#
 ### Example inputfiles:
 *Example inputfiles below can all be found in examples directory*
 
@@ -148,6 +148,7 @@ energy = jHF(H2O, "STO-3G"; HFtype="UHF", guess="hcore",
     levelshift=1.0, lshift_thresh=0.001)
  ```
 
+#
  **Example output:**
 
 ```text
