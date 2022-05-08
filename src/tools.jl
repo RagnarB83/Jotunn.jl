@@ -13,7 +13,7 @@ function elem_to_nuccharge(elem)
 end
 
 """
-Calculate nuclear-nuclear repulsion from elements and and coordinates
+nuc_nuc_repulsion: Calculate nuclear-nuclear repulsion from elements and and coordinates
 """
 function nuc_nuc_repulsion(elems,coords)
     ang2bohr = 1.88972612546
@@ -35,7 +35,7 @@ function nuc_nuc_repulsion(elems,coords)
 end
 
 """
-Calculate density matrix P from MO coefficient matrix C
+makedensity: Calculate density matrix P from MO coefficient matrix C
 Scaling: 2.0 for RHF, 1.0 for UHF
 """
 function makedensity(C, dim, Norb,scaling=2.0)
@@ -51,7 +51,7 @@ function makedensity(C, dim, Norb,scaling=2.0)
 end
 
 """
-Create array of occupation numbers
+makeoccupationarray: Create array of occupation numbers
 """
 function makeoccupationarray(norb,dim,val)
     occ=zeros(dim)
@@ -62,6 +62,9 @@ function makeoccupationarray(norb,dim,val)
 end
 
 #Check whether spin multiplicity is consistent with the nuclear charge and total charge
+"""
+check_multiplicity: Checks whether spin multiplicity is compatible with number of electrons
+"""
 function check_multiplicity(num_el,charge,mult)
     unpaired_electrons=mult-1
     result = map(iseven, (num_el,unpaired_electrons))

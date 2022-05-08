@@ -1,6 +1,9 @@
 #############################
 #Printing stuff
 ##############################
+"""
+printdebug: Simple print function that only prints if global debugflag is true
+"""
 function printdebug(string,var="")
     if debugflag == true
         println(string," : ",var)
@@ -8,7 +11,7 @@ function printdebug(string,var="")
 end
 
 """
-Return red/green color depending on value smaller/larger than threshold
+colorvalue_threshold: Return red/green color symbol depending on value smaller/larger than threshold
 """
 function colorvalue_threshold(var,threshold)
     if var < threshold
@@ -18,6 +21,9 @@ function colorvalue_threshold(var,threshold)
     end
 end
 
+"""
+print_program_header: Print Jotunn program header
+"""
 function print_program_header()
     print(Crayon(foreground = :white, bold = true), "="^50*"\n",Crayon(reset=true))
     print(Crayon(foreground = :blue, bold = true), "                   JOTUNN\n",Crayon(reset=true))
@@ -26,6 +32,9 @@ function print_program_header()
     print(Crayon(foreground = :yellow, bold = true), "\njHF module: a RHF/UHF program\n",Crayon(reset=true))
 end
 
+"""
+print_system: print molecular system properties
+"""
 function print_system(num_el,formula,E_ZZ,charge,mult,numatoms,unpaired_el)
     println("")
     print(Crayon(foreground = :green, bold = true), "SYSTEM\n",Crayon(reset=true))
@@ -38,7 +47,7 @@ function print_system(num_el,formula,E_ZZ,charge,mult,numatoms,unpaired_el)
 end
 
 """
-Print calculation setup
+print_calculation_setup: Print calculation setup
 """
 function print_calculation_setup(HFtype,basisset,dim,guess,tei_type,fock_algorithm,lowest_S_eigenval)
     labels=["HF type", "Basis set","No. basis functions","Guess", "2-electron type","Fock algorithm","S lowest eigenvalue"]
@@ -50,6 +59,9 @@ function print_calculation_setup(HFtype,basisset,dim,guess,tei_type,fock_algorit
         tf = tf_simple, border_crayon = crayon"bold yellow", header_crayon = crayon"bold green")
 end
 
+"""
+print_iteration_header: Print SCF iteration header (for printlevel > 1)
+"""
 function print_iteration_header(iter)
     println("")
     println(Crayon(foreground = :yellow, bold = true),"="^30,Crayon(reset=true))
@@ -85,7 +97,7 @@ function iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,
 end
 
 """
-Print energy contributions
+print_energy_contributions: Print energy contributions if SCF converged
 """
 function print_energy_contributions(energy,Hcore,F,P,T,E_ZZ)
     #Printing final energy contributions
@@ -104,7 +116,7 @@ function print_energy_contributions(energy,Hcore,F,P,T,E_ZZ)
 end
 
 """
-Print final results table
+print_final_results: Print final results table in the end of job
 """
 function print_final_results(energy,fragment,num_el,basisset,HFtype,fock_algorithm,finaliter)
     println()
@@ -119,7 +131,7 @@ function print_final_results(energy,fragment,num_el,basisset,HFtype,fock_algorit
 end
 
 """
-Mulliken closed-shell with pretty tables
+print_Mulliken: print Mulliken analysis for closed-shell system. Using pretty tables
 """
 function print_Mulliken(charges,elems)
     #println("\n\nMulliken Population Analysis")
@@ -131,7 +143,7 @@ function print_Mulliken(charges,elems)
 end
 
 """
-Mulliken open-shell with pretty tables
+print_Mulliken: print Mulliken analysis for open-shell system. Using pretty tables
 """
 function print_Mulliken(charges,elems,spinpops)
     #println("\n\nMulliken Population Analysis (open-shell)")
@@ -144,8 +156,7 @@ function print_Mulliken(charges,elems,spinpops)
 end
 
 """
-print Mayer analysis
-only MBOs for now
+print_Mayer_analysis: print Mayer analysis bond orders
 """
 function print_Mayer_analysis(MBOs,elems; mbo_print_threshold=0.01)
     #println("\nMayer bond orders (>0.01):")
@@ -171,7 +182,7 @@ function print_Mayer_analysis(MBOs,elems; mbo_print_threshold=0.01)
 end
 
 """
-print_MO_energies closed-shell (pretty tables)
+print_MO_energies: Print MO energies for closed-shell system (using pretty tables)
 """
 function print_MO_energies(occ,mos)
     #println("MO Energies (closed-shell)")
@@ -189,7 +200,7 @@ function print_MO_energies(occ,mos)
 end
 
 """
-print_MO_energies: open-shell
+print_MO_energies: Print MO energies for open-shell system (using pretty tables)
 """
 function print_MO_energies(occ_⍺, occ_β, mos_⍺, mos_β)
     println("-"^30)
@@ -207,7 +218,7 @@ function print_MO_energies(occ_⍺, occ_β, mos_⍺, mos_β)
 end
 
 """
-write multiple matrices
+write_matrices: write multiple matrices to disk
 """
 function write_matrices(F,C,P)
     println("Writing current Fock matrix to disk: Fmatrix")
@@ -219,7 +230,7 @@ function write_matrices(F,C,P)
 end
 
 """
-Write matrix to disk
+write_matrix_to_file: Write matrix to disk
 https://docs.julialang.org/en/v1/stdlib/DelimitedFiles/
 """
 function write_matrix_to_file(X,name)

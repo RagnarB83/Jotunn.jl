@@ -4,7 +4,7 @@
 #export choose_Fock, Fock_loop, Fock_loop_sparse, Fock_UHF_loop, Fock_turbo, Fock_UHF_turbo
 
 """
-Choosing Fock algorithm based on HFtype, user-input and system-size
+choose_Fock: Choosing Fock algorithm based on HFtype, user-input and system-size
 """
 function choose_Fock(HFtype,fock_algorithm,dim,tei_type)
     println("Choosing Fock algorithm.")
@@ -41,7 +41,7 @@ function choose_Fock(HFtype,fock_algorithm,dim,tei_type)
 end
 
 """
-Basic loop-version of the Fock-matrix
+Fock_loop: Fock-matrix RHF case loop-version
 Benchmark: RHF/def2-QZVPP on H2O with MBA: 
 243.604541  seconds total, 3.481820 seconds per Fock  (1 THREAD)
 """
@@ -67,7 +67,7 @@ function Fock_loop(Hcore,P,dim,tei)
 end
 
 """
-Sparse-integral loop-version of the Fock-matrix. 
+Fock_loop_sparse: Sparse-integral loop-version RHF case of the Fock-matrix. 
 """
 #Fock_loop(Hcore,P,dim,indices,tei)
 function Fock_loop_sparse(Hcore,P,dim,tei)
@@ -119,7 +119,7 @@ end
 
 
 """
-Unrestricted Fock matrix.
+Fock_UHF_loop: Fock-matrix UHF case using simple loop
 """
 function Fock_UHF_loop(Hcore,Pi,Pj,dim,tei)
     JK = zeros(dim,dim)
@@ -137,7 +137,7 @@ function Fock_UHF_loop(Hcore,Pi,Pj,dim,tei)
 end
 
 """
-Using LoopVectorization turbo macro
+Fock_turbo: Fock-matric RHF case with @turbo macro
 Benchmark: RHF/def2-QZVPP on H2O with MBA: 
 63.693465  seconds total, 0.325363 seconds per Fock (3-4 threads)
 77.170879 seconds total, 0.320401 per Fock (1 thread)
@@ -158,6 +158,9 @@ Warning: Uses threading by default. Turn off by export OMP_NUM_THREADS=1
      return F
  end
 
+ """
+ Fock_UHF_turbo: Fock-matrix UHF-case with @turbo macro
+ """
  function Fock_UHF_turbo(Hcore,Pi,Pj,dim,tei)
     JK = zeros(dim,dim)
     @turbo for µ in 1:dim
@@ -173,13 +176,13 @@ Warning: Uses threading by default. Turn off by export OMP_NUM_THREADS=1
     return F
 end
 
-"""
-Fock_tullio: Fock with Tullio and Loopvectorization library (n)
-Benchmark: RHF/def2-QZVPP on H2O with MBA: 
-268.934002 seconds total, 3.69 seconds per Fock  (ONLY TULLIO LIBRARY LOADED)
-63.543055 seconds total, 0.354601 seconds per Fock  (LOOPVECT AND TULLIO LIBRARY LOADED, THREADED)
-72.814342 seconds total, 0.398519 seconds per Fock  (LOOPVECT AND TULLIO LIBRARY LOADED, 1 THREAD)
-"""
+#"""
+#Fock_tullio: Fock with Tullio and Loopvectorization library (n)
+#Benchmark: RHF/def2-QZVPP on H2O with MBA: 
+#268.934002 seconds total, 3.69 seconds per Fock  (ONLY TULLIO LIBRARY LOADED)
+#63.543055 seconds total, 0.354601 seconds per Fock  (LOOPVECT AND TULLIO LIBRARY LOADED, THREADED)
+#72.814342 seconds total, 0.398519 seconds per Fock  (LOOPVECT AND TULLIO LIBRARY LOADED, 1 THREAD)
+#"""
 #function Fock_tullio(Hcore,P,dim,tei)
 #    JK = zeros(dim,dim)
 #    @tullio JK[µ,ν] += P[λ,σ]*(tei[ν,µ,λ,σ]-0.5*tei[ν,λ,µ,σ])
@@ -188,11 +191,11 @@ Benchmark: RHF/def2-QZVPP on H2O with MBA:
 #end
 
 
-"""
-Fock matrix using tensor macro (REQUIRES TensorOperations)
-Benchmark: RHF/def2-QZVPP on H2O with MBA: 
-109.18 seconds total, 1.13 seconds per Fock (1 thread)
-"""
+#"""
+#Fock matrix using tensor macro (REQUIRES TensorOperations)
+#Benchmark: RHF/def2-QZVPP on H2O with MBA: 
+#109.18 seconds total, 1.13 seconds per Fock (1 thread)
+#"""
 #function Fock_tensor(Hcore,P,dim,tei)
 #    JK = zeros(dim,dim)
 #    @tensor JK[µ,ν] += P[λ,σ]*(tei[ν,µ,λ,σ]-0.5*tei[ν,λ,µ,σ])

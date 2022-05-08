@@ -1,11 +1,4 @@
 export create_fragment
-#export Fragment, read_xyzfile
-#Python-function usage in this file:
-"""
-py_functions_coords.totmasslist(elems)
-py_functions_coords.nucchargelist(elems)
-"""
-
 
 #Keyword arguments with structs (without Parameters.jl)
 #Field without defaults are required keyword arguments at object creation
@@ -38,7 +31,7 @@ eldict_covrad=Dict(["H" => 0.31, "He" => 0.28, "Li" => 1.28, "Be" => 0.96, "B" =
 
 #Function to create fragment object of type Fragment. Better for user than constructor or object-creation statement
 """
-create_fragment: Creating a Jotunn molecule fragment
+create_fragment: Creating a Jotunn molecule fragment from multi-line string, XYZ-file etc.
 """
 function create_fragment(;coords_string=nothing,xyzfile=nothing,pdbfile=nothing,fragfile=nothing, coords=nothing,
     elems=nothing, calc_connectivity=false, label=nothing, charge=nothing, mult=nothing)
@@ -85,6 +78,9 @@ end
 
 
 #Read multi-line string and return elements and coordinates
+"""
+read_coordsstring: Read multi-line coordinates string and get elements and coordinates
+"""
 function read_coordsstring(mlstring)
     elems=[]
     numlines=count("\n",mlstring)
@@ -109,6 +105,9 @@ function read_coordsstring(mlstring)
 end
 
 #Read XYZ file
+"""
+read_xyzfile: Read XYZ-file and grab elements and coordinates
+"""
 function read_xyzfile(filename)
     #Will accept atom-numbers as well as symbols
     elements = ["H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K",

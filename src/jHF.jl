@@ -150,7 +150,6 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
             energy = E_ZZ + 0.5 * tr((Hcore+F)*P) #Calculate energy
 
             if debugprint == true 
-                #TODO: Appending instead
                 write_matrices(F,C,P) 
             end
         else
@@ -219,7 +218,6 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
         end
         if iter == maxiter
             println("Failed to converge in $maxiter iterations!")
-            #TODO: Print more here?
             return nothing
         end
     end

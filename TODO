@@ -1,5 +1,3 @@
-
-
 - Finalize package: Platform, dependencies, implement as Package (without registry)
 - Implement Fock using sparse version of 2ERI from GaussianBasis.jl
 - Better guess

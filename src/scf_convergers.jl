@@ -1,5 +1,5 @@
 """
-deltaPcheck: Compare density matrices
+deltaPcheck: Compare density matrices by RMSE and MaxE
 """
 function deltaPcheck(P, Pold)
     diff = Pold - P
@@ -10,7 +10,7 @@ function deltaPcheck(P, Pold)
 end
 
 """
-levelshift_control
+levelshift_control: Control and do levelshifting of Fock matrix during SCF
 """
 function levelshift_control(F,levelshift,numorbs,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=0.001)
     global levelshift_flag
@@ -35,7 +35,7 @@ function levelshift_control(F,levelshift,numorbs,dim,P_RMS,rmsDP_threshold,iter,
     return F
 end
 
-"""levelshift_Fock:
+"""levelshift_Fock: levleshift Fock matrix
 """
 function levelshift_Fock(F,parameter, occ, dim)
     #Shift the diagonal elements of the virtual block of the Fock matrix

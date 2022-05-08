@@ -1,6 +1,5 @@
 """
-Mulliken for closed-shells
-    
+mulliken: Mulliken analysis for closed-shells
 """
 function mulliken(S,P,bset,elems)
     PS=P*S
@@ -28,7 +27,7 @@ function mulliken(S,P,bset,elems)
 end
 
 """
-Mulliken for open-shells
+mulliken: Mulliken analysis for open-shells
 """
 function mulliken(S,P,R,bset,elems)
     PS=P*S; RS=R*S
@@ -51,7 +50,7 @@ end
 
 
 """
-Mayer bond order function. Returns dictionary of all atom pairs
+Mayer_BO: Mayer bond order function. Returns dictionary of all atom pairs
 """
 function Mayer_BO(S,P,R,bset_atom_mapping)
     numatoms=bset_atom_mapping[end]

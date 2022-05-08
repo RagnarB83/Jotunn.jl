@@ -1,5 +1,8 @@
 
 #Calculate 2-electron integrals via GaussianBasis.jl
+"""
+tei_calc: Calculate 2-electron integrals in 4 different ways
+"""
 function tei_calc(bset,tei_type)
     if tei_type == "4c"
         #Full 4-rank  tensor
@@ -17,13 +20,7 @@ function tei_calc(bset,tei_type)
     return integrals
 end
 
-#SLOW
-function tei_lookup(indices,integrals)
-    #Change this function depending on the form of the 2-electron integrals?
-    #For now it's the full 4-index tensor
-    b = integrals[indices[1],indices[2],indices[3],indices[4]]
-    return b
-end
+
 
 """
 read_basis_file: Read ORCA-style basis set file and return dictionary of element:basis-info-dict
@@ -207,7 +204,7 @@ end
 
 
 """
-Created simply array (size of basis-set dimension) of atom indices in basis-function order.
+bf_atom_mapping: Created simply array (size of basis-set dimension) of atom indices in basis-function order.
 i.e. map of which basis-function belongs to which atom
 """
 function bf_atom_mapping(bset)
