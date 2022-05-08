@@ -8,6 +8,7 @@ Might one day turn into something useful.
 **Current features**
 - 1 and 2-electron integrals via GaussianBasis.jl and Libcint.
 - RHF and UHF algorithm with full 4-rank tensor. 
+- Fock matrix speed up via LoopVectorization
 - Mulliken population analysis (RHF and UHF)
 - Mayer bond orders (RHF and UHF)
 - SCF convergence aids: levelshifting
@@ -36,9 +37,15 @@ Might one day turn into something useful.
 - Fix bug: GaussianBasis.jl sensitive to scientific notation in coordinates
 - Read-in basis set: Normalize contraction coefficients
 
+**Dependencies (not in Julia standard library):**
+- GaussianBasis.jl  (1 and 2-electron integrals)
+- Molecules.jl (helper program with GaussianBasis.jl)
+- LoopVectorization.jl (to speed up Fock matrix)
+- PrettyTables.jl
+- Crayons.jl
+
 
 **Documentation:**
-
 
 **Example:**
 
