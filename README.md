@@ -50,19 +50,20 @@ Might one day turn into something useful.
 
 ### How to install:
 
-Option 1. Manual setup: 
+*Option 1. Manual setup:*
 ```sh
-export JULIA_LOAD_PATH=/path/to/Jotunn/src:$JULIA_LOAD_PATH  #copy-paste in Unix shell to make Jotunn package available to Julia
+export JULIA_LOAD_PATH=/path/to/Jotunn/src:$JULIA_LOAD_PATH  
+#copy-paste in Unix shell to make Jotunn package available to Julia
 ```
 
-Option 2. Install package: 
+*Option 2. Install package:*
 
 *NOT YET READY...*
 
 
 ### How to use:
 
-1. *Option 1: 
+*Option 1: 
 Launch an interactive julia session:*
 ```sh
 julia
@@ -79,7 +80,7 @@ jHF(H2, "STO-3G")
 ```
 
 
-2. *Option 2: Create a Julia script (e.g. test.jl)*  
+*Option 2: Create a Julia script (e.g. test.jl)*  
 
 
 
@@ -91,7 +92,7 @@ H 0.0 0.0 0.0
 H 0.0 0.0 0.74
 """, charge=0, mult=1)
 ```
-Run inputscripts like this: 
+Run inputscript like this: 
 ```sh
 julia test.jl
 ```
