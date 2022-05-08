@@ -188,7 +188,6 @@ Beginning SCF iterations
 SCF iteration 1
 ==============================
 Levelshift: true
-Iter: 1 P_RMS: 9999 (threshold to turn off levelshift:0.0001
 Level shift active. Adding levelshift: 2.0 in iteration 1
 Current energy: -1.586873896382793
 Energy change: -1.586873896382793 Eh (threshold: 1.0e-8)
@@ -199,7 +198,6 @@ Max-DP: -0.018125080890486533 (threshold: 1.0e-7)
 SCF iteration 2
 ==============================
 Levelshift: true
-Iter: 2 P_RMS: 0.8825776863627137 (threshold to turn off levelshift:0.0001
 Level shift active. Adding levelshift: 2.0 in iteration 2
 Current energy: -0.8491820078453758
 Energy change: 0.7376918885374173 Eh (threshold: 1.0e-8)

@@ -37,6 +37,9 @@ eldict_covrad=Dict(["H" => 0.31, "He" => 0.28, "Li" => 1.28, "Be" => 0.96, "B" =
 
 
 #Function to create fragment object of type Fragment. Better for user than constructor or object-creation statement
+"""
+create_fragment: Creating a Jotunn molecule fragment
+"""
 function create_fragment(;coords_string=nothing,xyzfile=nothing,pdbfile=nothing,fragfile=nothing, coords=nothing,
     elems=nothing, calc_connectivity=false, label=nothing, charge=nothing, mult=nothing)
 

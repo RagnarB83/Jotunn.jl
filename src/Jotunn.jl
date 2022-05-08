@@ -1,3 +1,7 @@
+"""
+Jotunn: a simple QM program in Julia by Ragnar Bjornsson
+Integrals via the GaussianBasis.jl interface to Libcint
+"""
 module Jotunn
 
 using LinearAlgebra
@@ -16,14 +20,7 @@ using LoopVectorization
 using Molecules
 using GaussianBasis
 
-
-
-#"""
-#Jotunn: a simple QM program in Julia by Ragnar Bjornsson
-#Integrals via the GaussianBasis.jl interface to Libcint
-#jHF: RHF/UHF program
-#"""
-
+#Source-code files
 include("fragment.jl")
 include("jHF.jl")
 include("Fock.jl")

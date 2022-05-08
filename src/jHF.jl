@@ -1,8 +1,6 @@
 export jHF
 """
-Jotunn: a simple QM program in Julia by Ragnar Bjornsson
-Integrals via the GaussianBasis.jl interface to Libcint
-jHF: RHF/UHF program
+Jotunn: jHF: a RHF/UHF program
 """
 function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile="none", maxiter=120, 
     print_final_matrices=false, rmsDP_threshold=5e-9, maxDP_threshold=1e-7, tei_type="4c",
