@@ -47,12 +47,62 @@ Might one day turn into something useful.
 
 ## Documentation:
 
-### Example:
 
-#
+### How to install:
+
+Option 1. Manual setup: 
+```sh
+export JULIA_LOAD_PATH=/path/to/Jotunn/src:$JULIA_LOAD_PATH  #copy-paste in Unix shell to make Jotunn package available to Julia
+```
+
+Option 2. Install package: 
+
+*NOT YET READY...*
+
+
+### How to use:
+
+1. *Option 1: 
+Launch an interactive julia session:*
+```sh
+julia
+```
+
+Then within Julia REPL, import Jotunn, create a molecule fragment and call jHF :
+```julia
+using Jotunn
+H2 = create_fragment(coords_string="""
+H 0.0 0.0 0.0
+H 0.0 0.0 0.74
+""", charge=0, mult=1)
+jHF(H2, "STO-3G")
+```
+
+
+2. *Option 2: Create a Julia script (e.g. test.jl)*  
+
+
+
+test.jl:
+```julia
+using Jotunn
+H2 = create_fragment(coords_string="""
+H 0.0 0.0 0.0
+H 0.0 0.0 0.74
+""", charge=0, mult=1)
+```
+Run inputscripts like this: 
+```sh
+julia test.jl
+```
+
+*Example inputfiles below can all be found in examples directory*
+
+See  See [GaussianBasis/lib directory](https://github.com/FermiQC/GaussianBasis.jl/tree/main/lib) for list of available basis-sets.
+
 **simple-input.jl:**
 ```julia
-include("/path/to/jHF.jl")
+using Jotunn
 
 # Create molecular fragments
 
@@ -63,24 +113,25 @@ H 0.0 0.0 0.74
 
 #Simple call
 energy= jHF(H2, "STO-3G")
+println("Energy from Jotunn: $energy Eh")
  ```
 **moreoptions-input.jl:**
  ```julia
-include("/path/to/jHF.jl")
+using Jotunn
 H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
 
 #More keywords
-energy= jHF(H2, "STO-3G"; maxiter=200, fock_algorithm="turbo", 
+energy= jHF(H2O, "STO-3G"; maxiter=200, fock_algorithm="turbo", 
     HFtype="RHF", levelshift=2.0, lshift_thresh=1e-4, tei_type="4c", 
     print_final_matrices=true, debugprint=true)
  ```
 
 **alloptions-input.jl:**
  ```julia
-include("/path/to/jHF.jl")
+using Jotunn
 H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
 #All features
-energy = jHF(H2O, basisset="STO-3G"; HFtype="UHF", guess="hcore", 
+energy = jHF(H2O, "STO-3G"; HFtype="UHF", guess="hcore", 
     basisfile="none", maxiter=200, 
     print_final_matrices=false, debugprint=false, 
     rmsDP_threshold=5e-9, maxDP_threshold=1e-7, energythreshold=1e-8, 

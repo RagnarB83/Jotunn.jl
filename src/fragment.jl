@@ -1,5 +1,5 @@
-export Fragment, create_fragment, read_xyzfile
-
+export create_fragment
+#export Fragment, read_xyzfile
 #Python-function usage in this file:
 """
 py_functions_coords.totmasslist(elems)
