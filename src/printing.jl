@@ -51,11 +51,11 @@ print_calculation_setup: Print calculation setup
 """
 function print_calculation_setup(HFtype,basisset,dim,guess,tei_type,fock_algorithm,lowest_S_eigenval)
     labels=["HF type", "Basis set","No. basis functions","Guess", "2-electron type","Fock algorithm","S lowest eigenvalue"]
-    stuff=[HFtype,basisset,dim,guess,tei_type,fock_algorithm,lowest_S_eigenval]
+    stuff=[HFtype,basisset,string(dim),guess,tei_type,fock_algorithm,lowest_S_eigenval]
     data=hcat(labels,stuff)
     print(Crayon(foreground = :green, bold = true), "CALCULATION SETTINGS\n",Crayon(reset=true))
     pretty_table(data; crop=:none,  noheader = true,
-        formatters = ft_printf("%14.8f", [2]),
+        formatters = ft_printf("%14.4f", [2]),
         tf = tf_simple, border_crayon = crayon"bold yellow", header_crayon = crayon"bold green")
 end
 
@@ -86,12 +86,13 @@ function iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,
             Crayon(reset=true)," (threshold: $maxDP_threshold)\n")
     else
         #Minimal printing
-        #println("$iter $energy $deltaE $P_RMS $P_MaxE $levelshiftflag")
-        @printf("%6d %17.10f %17.10f %17.10f %17.10f %10s %10s\n", iter, energy, deltaE,P_RMS,P_MaxE,levelshiftflag, "no")
-
-        #TODO: add colorprinting to deltaE, P_RMS, P_MaxE ??
-        #print("Energy change:",Crayon(foreground = colorvalue_threshold(abs(deltaE),energythreshold)), "$deltaE ",
-        #    Crayon(reset=true)," (threshold: $energythreshold)\n")
+        #@printf("%6d %17.10f %17.10f %17.10f %17.10f %10s %10s\n", iter, energy, deltaE,P_RMS,P_MaxE,levelshiftflag, "no")
+        #Note: Crayon output might add ~1-1.5 sec in total per 70 iterations
+        @printf("%6d %17.10f ", iter, energy)
+        @printf("%s%17.10f%s ",Crayon(foreground = colorvalue_threshold(abs(deltaE),energythreshold)),deltaE,Crayon(reset=true))
+        @printf("%s%17.10f%s ",Crayon(foreground = colorvalue_threshold(abs(P_RMS),rmsDP_threshold)),P_RMS,Crayon(reset=true))
+        @printf("%s%17.10f%s ",Crayon(foreground = colorvalue_threshold(abs(P_MaxE),maxDP_threshold)),P_MaxE,Crayon(reset=true))
+        @printf("%10s %10s\n",levelshiftflag, "no")
     end
 
 end
@@ -190,7 +191,7 @@ function print_MO_energies(occ,mos)
     #print(Crayon(foreground = :yellow, bold = true), "-"^30*"\n",Crayon(reset=true))
     print(Crayon(foreground = :yellow, bold = true), "MO Energies (closed-shell)\n",Crayon(reset=true))
     #print(Crayon(foreground = :yellow, bold = true), "-"^30*"\n",Crayon(reset=true))
-    print(Crayon(foreground = :red, bold = true), "                        ⍺",Crayon(reset=true))
+    #print(Crayon(foreground = :red, bold = true), "                        ⍺",Crayon(reset=true))
     println("")
     mos_ev=mos*27.211399
     data=hcat([string(i) for i in 1:length(mos)],occ,mos,mos_ev)

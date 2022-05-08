@@ -1,4 +1,5 @@
 - Finalize package: Platform, dependencies, implement as Package (without registry)
+- Add dashed line below occupied orbitals in MO energy output
 - Implement Fock using sparse version of 2ERI from GaussianBasis.jl
 - Better guess
 - DIIS: https://www.chem.fsu.edu/~deprince/programming_projects/diis/
