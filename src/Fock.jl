@@ -46,7 +46,7 @@ Benchmark: RHF/def2-QZVPP on H2O with MBA:
 243.604541  seconds total, 3.481820 seconds per Fock  (1 THREAD)
 """
 function Fock_loop(Hcore,P,dim,tei)
-    println("This is regular Fock loop")
+    printdebug("This is regular Fock loop")
     JK = zeros(dim,dim)
     @simd for µ in 1:dim
         for ν in 1:dim

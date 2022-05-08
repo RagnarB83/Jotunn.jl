@@ -7,10 +7,21 @@ function printdebug(string,var="")
     end
 end
 
+"""
+Return red/green color depending on value smaller/larger than threshold
+"""
+function colorvalue_threshold(var,threshold)
+    if var < threshold
+        return :green
+    else
+        return :red
+    end
+end
+
 function print_program_header()
     print(Crayon(foreground = :white, bold = true), "="^50*"\n",Crayon(reset=true))
     print(Crayon(foreground = :blue, bold = true), "                   JOTUNN\n",Crayon(reset=true))
-    print(Crayon(foreground = :blue, bold = false), "a simple quantum chemistry program in Julia\n",Crayon(reset=true))
+    print(Crayon(foreground = :white, bold = false), "a simple quantum chemistry program in Julia\n",Crayon(reset=true))
     print(Crayon(foreground = :white, bold = true), "="^50*"\n",Crayon(reset=true))
     print(Crayon(foreground = :yellow, bold = true), "\njHF module: a RHF/UHF program\n",Crayon(reset=true))
 end
@@ -30,7 +41,7 @@ end
 Print calculation setup
 """
 function print_calculation_setup(HFtype,basisset,dim,guess,tei_type,fock_algorithm,lowest_S_eigenval)
-    labels=["HF type", "Basis set","No. basis functions","Guess", "tei_type","Fock algorithm","S lowest eigenvalue"]
+    labels=["HF type", "Basis set","No. basis functions","Guess", "2-electron type","Fock algorithm","S lowest eigenvalue"]
     stuff=[HFtype,basisset,dim,guess,tei_type,fock_algorithm,lowest_S_eigenval]
     data=hcat(labels,stuff)
     print(Crayon(foreground = :green, bold = true), "CALCULATION SETUP\n",Crayon(reset=true))
@@ -41,9 +52,36 @@ end
 
 function print_iteration_header(iter)
     println("")
-    println("="^30)
-    println("SCF iteration $iter")
-    println("="^30)
+    println(Crayon(foreground = :yellow, bold = true),"="^30,Crayon(reset=true))
+    println(Crayon(foreground = :yellow, bold = true),"SCF iteration $iter",Crayon(reset=true))
+    println(Crayon(foreground = :yellow, bold = true),"="^30,Crayon(reset=true))
+end
+
+"""
+iteration_printing: Printing during SCF iterations.
+printlevel=1 => minimal printing
+printlevel >1 => more elaborate printing with SCF-iteration header
+"""
+function iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,rmsDP_threshold,P_MaxE,maxDP_threshold,levelshiftflag)
+    if printlevel > 1
+        #Fair amount of printing
+        println("Current energy: $energy")
+        print("Energy change:",Crayon(foreground = colorvalue_threshold(abs(deltaE),energythreshold)), "$deltaE ",
+            Crayon(reset=true)," (threshold: $energythreshold)\n")
+        print("RMS-DP: ",Crayon(foreground = colorvalue_threshold(abs(P_RMS),rmsDP_threshold)), "$P_RMS ",
+            Crayon(reset=true)," (threshold: $rmsDP_threshold)\n")
+        print("Max-DP: ",Crayon(foreground = colorvalue_threshold(abs(P_MaxE),maxDP_threshold)), "$P_MaxE ",
+            Crayon(reset=true)," (threshold: $maxDP_threshold)\n")
+    else
+        #Minimal printing
+        #println("$iter $energy $deltaE $P_RMS $P_MaxE $levelshiftflag")
+        @printf("%6d %17.10f %17.10f %17.10f %17.10f %10s %10s\n", iter, energy, deltaE,P_RMS,P_MaxE,levelshiftflag, "no")
+
+        #TODO: add colorprinting to deltaE, P_RMS, P_MaxE ??
+        #print("Energy change:",Crayon(foreground = colorvalue_threshold(abs(deltaE),energythreshold)), "$deltaE ",
+        #    Crayon(reset=true)," (threshold: $energythreshold)\n")
+    end
+
 end
 
 """
@@ -72,7 +110,7 @@ function print_final_results(energy,fragment,num_el,basisset,HFtype,fock_algorit
     println()
     print(Crayon(foreground = :green, bold = true), "FINAL RESULTS\n",Crayon(reset=true))
     labels=["Final HF energy","Molecule formula","Number of electrons","Basis set","HF type","Fock algorithm","SCF iterations"]
-    stuff=[energy,fragment.formula,num_el,basisset,HFtype,fock_algorithm,string(finaliter)]
+    stuff=[energy,fragment.formula,string(num_el),basisset,HFtype,fock_algorithm,string(finaliter)]
     data=hcat(labels,stuff)
     pretty_table(data; crop=:none,  noheader = true,
         formatters = ft_printf("%14.8f", [2]),
@@ -84,7 +122,8 @@ end
 Mulliken closed-shell with pretty tables
 """
 function print_Mulliken(charges,elems)
-    println("\n\nMulliken Population Analysis")
+    #println("\n\nMulliken Population Analysis")
+    print(Crayon(foreground = :yellow, bold = true), "\nMulliken Population Analysis (closed-shell)\n",Crayon(reset=true))
     data=hcat([i for i in 1:length(elems)],elems,charges)
     pretty_table(data; header=["Atom", "Element", "Charge"], crop=:none,
         formatters = ft_printf("%10.6f", [3]))
@@ -95,7 +134,8 @@ end
 Mulliken open-shell with pretty tables
 """
 function print_Mulliken(charges,elems,spinpops)
-    println("\n\nMulliken Population Analysis (open-shell)")
+    #println("\n\nMulliken Population Analysis (open-shell)")
+    print(Crayon(foreground = :yellow, bold = true), "\nMulliken Population Analysis (open-shell)\n",Crayon(reset=true))
     data=hcat([i for i in 1:length(elems)],elems,charges,spinpops)
     pretty_table(data; header=["Atom", "Element", "Charge", "Spin pop."], crop=:none,
         formatters = ft_printf("%10.6f", [3,4]))
@@ -108,7 +148,9 @@ print Mayer analysis
 only MBOs for now
 """
 function print_Mayer_analysis(MBOs,elems; mbo_print_threshold=0.01)
-    println("\nMayer bond orders (>0.01):")
+    #println("\nMayer bond orders (>0.01):")
+    print(Crayon(foreground = :yellow, bold = true), "\nMayer bond orders\n",Crayon(reset=true))
+    println("Threshold: $mbo_print_threshold")
     mbovals=[]
     bondpairs=[]
     for mbo in MBOs
@@ -132,9 +174,11 @@ end
 print_MO_energies closed-shell (pretty tables)
 """
 function print_MO_energies(occ,mos)
-    println("-"^30)
-    println("MO Energies (closed-shell)")
-    println("-"^30)
+    #println("MO Energies (closed-shell)")
+    println("\n")
+    #print(Crayon(foreground = :yellow, bold = true), "-"^30*"\n",Crayon(reset=true))
+    print(Crayon(foreground = :yellow, bold = true), "MO Energies (closed-shell)\n",Crayon(reset=true))
+    #print(Crayon(foreground = :yellow, bold = true), "-"^30*"\n",Crayon(reset=true))
     print(Crayon(foreground = :red, bold = true), "                        ⍺",Crayon(reset=true))
     println("")
     mos_ev=mos*27.211399

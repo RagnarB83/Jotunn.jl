@@ -4,11 +4,13 @@ Jotunn: jHF: a RHF/UHF program
 """
 function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile="none", maxiter=120, 
     print_final_matrices=false, rmsDP_threshold=5e-9, maxDP_threshold=1e-7, tei_type="4c",
-    energythreshold=1e-8, debugprint=false, fock_algorithm="turbo", levelshift=1.0, lshift_thresh=0.001)
+    energythreshold=1e-8, debugprint=false, fock_algorithm="turbo", levelshift=1.0, lshift_thresh=0.001,
+    printlevel=2)
 
     print_program_header()
     global debugflag  = debugprint
 
+    #Removing old matrix files if present
     if debugprint == true || print_final_matrices == true
         rm("Fmatrix", force=true)
         rm("Cmatrix", force=true)
@@ -45,7 +47,7 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
     # INTEGRALS
     ##########################
     #Setting up 1-electron and 2-electron integrals
-    println("Direct calculation of integrals via GaussianBasis.jl library")       
+    println("Integrals provided via GaussianBasis.jl library")       
     #Basis set object creation
     bset = basis_set_create(basisset,fragment.elems,fragment.coords; basisfile=basisfile)
     dim = bset.nbas
@@ -113,17 +115,25 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
     eps_⍺=zeros(dim); eps_β=zeros(dim); eps=zeros(dim);
     global levelshift_flag = true
     #SCF loop beginning
+    if printlevel == 1
+        #println("Iteration     Energy deltaE  RMS-DP Max-DP Levelshift")
+        @printf("%6s %17s %17s %17s %17s %10s %10s\n", "Iter", "Energy", "deltaE", "RMS-DP", "Max-DP", "Levelshift", "Damping")
+    end
     @time for iter in 1:maxiter
-        print_iteration_header(iter)
+        #Printing per iteration
+        if printlevel > 1
+            #Fair amount of printing
+            print_iteration_header(iter)
+        end
         if HFtype == "RHF"
-            @time F = Fock(Hcore,P,dim,tei) #Update Fock-matrix
+            F = Fock(Hcore,P,dim,tei) #Update Fock-matrix
             #if iter == 2
             #    println("iter: $iter")
             #    println("F: $F")
             #    exit()
             #end
             #Possible levelshifting
-            @time F = levelshift_control(F,levelshift,numoccorbs,dim,P_RMS,rmsDP_threshold,iter, turnoff_threshold=lshift_thresh)
+            F = levelshift_control(F,levelshift,numoccorbs,dim,P_RMS,rmsDP_threshold,iter, turnoff_threshold=lshift_thresh,printlevel)
             F′ = transpose(S_minhalf)*F*S_minhalf #Transform Fock matrix
             eps, C′ = eigen(F′) #Diagonalize transformed Fock to get eps and C'
             C = S_minhalf*C′ # Get C from C'
@@ -137,16 +147,16 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
             end
         else
             #Solve ⍺ equations
-            @time F_⍺ = Fock(Hcore,P_⍺,P_β,dim,tei) #Update Fock-matrix alpha
-            @time F_⍺ = levelshift_control(F_⍺,levelshift,numoccorbs_⍺,dim,P_RMS,rmsDP_threshold,iter, turnoff_threshold=lshift_thresh)
+            F_⍺ = Fock(Hcore,P_⍺,P_β,dim,tei) #Update Fock-matrix alpha
+            F_⍺ = levelshift_control(F_⍺,levelshift,numoccorbs_⍺,dim,P_RMS,rmsDP_threshold,iter, turnoff_threshold=lshift_thresh)
             F′_⍺ = transpose(S_minhalf)*F_⍺*S_minhalf #Transform Fock matrix
             eps_⍺, C′_⍺ = eigen(F′_⍺) #Diagonalize transformed Fock to get eps and C'
             C_⍺ = S_minhalf*C′_⍺ # Get C from C'
             P_⍺_old=deepcopy(P_⍺) #Keep copy of old P
             P_⍺ = makedensity(C_⍺, dim, numoccorbs_⍺, 1.0) #Calculate new P from C
             #Solve β equations
-            @time F_β = Fock(Hcore,P_β,P_⍺,dim,tei) #Update Fock-matrix beta
-            @time F_β = levelshift_control(F_β,levelshift,numoccorbs_β,dim,P_RMS,rmsDP_threshold,iter, turnoff_threshold=lshift_thresh)
+            F_β = Fock(Hcore,P_β,P_⍺,dim,tei) #Update Fock-matrix beta
+            F_β = levelshift_control(F_β,levelshift,numoccorbs_β,dim,P_RMS,rmsDP_threshold,iter, turnoff_threshold=lshift_thresh)
             F′_β = transpose(S_minhalf)*F_β*S_minhalf #Transform Fock matrix
             eps_β, C′_β = eigen(F′_β) #Diagonalize transformed Fock to get eps and C'
             C_β = S_minhalf*C′_β # Get C from C'
@@ -160,22 +170,22 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
             energy = E_ZZ + 0.5 * tr((Hcore+F_⍺)*P_⍺) + 0.5 * tr((Hcore+F_β)*P_β)  #Calculate energy
         end
 
-        #Printing per iteration
-        println("Current energy: $energy")
+
 
         ##########################
         # CONVERGENCE CHECK
         ##########################
         deltaE = energy-energy_old
         P_RMS, P_MaxE = deltaPcheck(P, P_old)
-
-        println("Energy change: $deltaE Eh (threshold: $energythreshold)")
-        println("RMS-DP: $P_RMS (threshold: $rmsDP_threshold)")
-        println("Max-DP: $P_MaxE (threshold: $maxDP_threshold)")
         energy_old=energy
 
+        #Printing per iteration
+        iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,rmsDP_threshold,
+            P_MaxE,maxDP_threshold,levelshift_flag)
+
         if P_MaxE < maxDP_threshold && P_RMS < rmsDP_threshold && abs(deltaE) < energythreshold
-            println("\nSCF converged in $iter iterations! Hell yeah! 🎉")
+            #println("\n                              SCF converged in $iter iterations! Hell yeah! 🎉")
+            print(Crayon(foreground = :green, bold = true), "\n                              SCF converged in $iter iterations! Hell yeah! 🎉\n\n",Crayon(reset=true))
             finaliter=iter
             if HFtype == "RHF"
                 print_energy_contributions(energy,Hcore,F,P,T,E_ZZ)
@@ -212,15 +222,15 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
     #ORBITALS AND POPULATION ANALYSIS
     if HFtype=="RHF"
         #Orbitals
-        @time occupations=makeoccupationarray(numoccorbs,dim,2.0) #Occupation array
+        occupations=makeoccupationarray(numoccorbs,dim,2.0) #Occupation array
         print_MO_energies(occupations,eps)
         #Mulliken
-        @time charges = mulliken(S,P,bset,fragment.elems)
-        @time print_Mulliken(charges,fragment.elems)
+        charges = mulliken(S,P,bset,fragment.elems)
+        print_Mulliken(charges,fragment.elems)
         P_⍺_β=zeros(dim,dim) #dummy spin-density
         #Mayer
-        @time MBOs = Mayer_BO(S,P,P_⍺_β, bset_atom_mapping)
-        @time print_Mayer_analysis(MBOs,fragment.elems)
+        MBOs = Mayer_BO(S,P,P_⍺_β, bset_atom_mapping)
+        print_Mayer_analysis(MBOs,fragment.elems)
     else
         #Orbitals
         occupations_⍺=makeoccupationarray(numoccorbs_⍺,dim,1.0) #Occupation array
