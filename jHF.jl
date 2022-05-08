@@ -24,7 +24,7 @@ include("pop_ana.jl")
 include("printing.jl")
 
 """
-Ymir: a simple QM program in Julia by Ragnar Bjornsson
+Jotunn: a simple QM program in Julia by Ragnar Bjornsson
 Integrals via the GaussianBasis.jl interface to Libcint
 jHF: RHF/UHF program
 """
