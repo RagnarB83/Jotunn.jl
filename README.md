@@ -51,6 +51,10 @@ Might one day turn into something useful.
 ### How to install:
 
 *Option 1. Manual setup:*
+
+First clone or download the Jotunn source-code. 
+
+Make package available to Julia by setting the environment variable:
 ```sh
 export JULIA_LOAD_PATH=/path/to/Jotunn/src:$JULIA_LOAD_PATH  
 #copy-paste in Unix shell to make Jotunn package available to Julia
