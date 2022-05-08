@@ -149,7 +149,7 @@ energy = jHF(H2O, "STO-3G"; HFtype="UHF", guess="hcore",
  ```
 
 #
- **Example output:**
+### Example output
 
 ```text
 
