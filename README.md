@@ -50,7 +50,7 @@ Might one day turn into something useful.
 ### Example:
 
 #
-**Julia inputfile.jl:**
+**inputfile1.jl:**
 ```julia
 include("/path/to/jHF.jl")
 
@@ -60,16 +60,25 @@ H2 = create_fragment(coords_string="""
 H 0.0 0.0 0.0
 H 0.0 0.0 0.74
 """, charge=0, mult=1)
-H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
 
 #Simple call
 energy= jHF(H2, "STO-3G")
+ ```
+**inputfile2.jl:**
+ ```julia
+include("/path/to/jHF.jl")
+H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
 
 #More keywords
 energy= jHF(H2, "STO-3G"; maxiter=200, fock_algorithm="turbo", 
     HFtype="RHF", levelshift=2.0, lshift_thresh=1e-4, tei_type="4c", 
     print_final_matrices=true, debugprint=true)
+ ```
 
+**inputfile3.jl:**
+ ```julia
+include("/path/to/jHF.jl")
+H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
 #All features
 energy = jHF(H2O, basisset="STO-3G"; HFtype="UHF", guess="hcore", 
     basisfile="none", maxiter=200, 
@@ -77,11 +86,9 @@ energy = jHF(H2O, basisset="STO-3G"; HFtype="UHF", guess="hcore",
     rmsDP_threshold=5e-9, maxDP_threshold=1e-7, energythreshold=1e-8, 
     tei_type="4c", fock_algorithm="turbo", 
     levelshift=1.0, lshift_thresh=0.001)
-
-
  ```
 
- **Output:**
+ **Example output:**
 
 ```text
 
