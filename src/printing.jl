@@ -44,7 +44,7 @@ function print_calculation_setup(HFtype,basisset,dim,guess,tei_type,fock_algorit
     labels=["HF type", "Basis set","No. basis functions","Guess", "2-electron type","Fock algorithm","S lowest eigenvalue"]
     stuff=[HFtype,basisset,dim,guess,tei_type,fock_algorithm,lowest_S_eigenval]
     data=hcat(labels,stuff)
-    print(Crayon(foreground = :green, bold = true), "CALCULATION SETUP\n",Crayon(reset=true))
+    print(Crayon(foreground = :green, bold = true), "CALCULATION SETTINGS\n",Crayon(reset=true))
     pretty_table(data; crop=:none,  noheader = true,
         formatters = ft_printf("%14.8f", [2]),
         tf = tf_simple, border_crayon = crayon"bold yellow", header_crayon = crayon"bold green")

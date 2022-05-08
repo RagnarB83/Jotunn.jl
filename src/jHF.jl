@@ -25,8 +25,15 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
     num_el=floor(Int64,sum_nuccharge-fragment.charge)
     E_ZZ=nuc_nuc_repulsion(fragment.elems,fragment.coords)
 
+    #Check whether multiplicity makes sense before continuing
+    check_multiplicity(num_el,fragment.charge,fragment.mult)
+
     #RHF vs. UHF
     if HFtype == "RHF"
+        if fragment.mult != 1
+            println("RHF and multiplicity > 1 is not possible. Exiting!")
+            exit()
+        end
         #Doubly occupied orbitals
         numoccorbs=Int64(num_el/2)
         unpaired_electrons=0
@@ -36,6 +43,7 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
         paired_el_half=paired_el/2
         numoccorbs_⍺=trunc(Int64,paired_el_half+unpaired_electrons)
         numoccorbs_β=trunc(Int64,paired_el_half)
+        #TODO: broken-symmetry case
     else
         println("Unknown HFtype! Exiting.")
         exit()
@@ -133,7 +141,7 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
             #    exit()
             #end
             #Possible levelshifting
-            F = levelshift_control(F,levelshift,numoccorbs,dim,P_RMS,rmsDP_threshold,iter, turnoff_threshold=lshift_thresh,printlevel)
+            F = levelshift_control(F,levelshift,numoccorbs,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
             F′ = transpose(S_minhalf)*F*S_minhalf #Transform Fock matrix
             eps, C′ = eigen(F′) #Diagonalize transformed Fock to get eps and C'
             C = S_minhalf*C′ # Get C from C'
@@ -146,17 +154,17 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
                 write_matrices(F,C,P) 
             end
         else
-            #Solve ⍺ equations
+            #Solve ⍺ part
             F_⍺ = Fock(Hcore,P_⍺,P_β,dim,tei) #Update Fock-matrix alpha
-            F_⍺ = levelshift_control(F_⍺,levelshift,numoccorbs_⍺,dim,P_RMS,rmsDP_threshold,iter, turnoff_threshold=lshift_thresh)
+            F_⍺ = levelshift_control(F_⍺,levelshift,numoccorbs_⍺,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
             F′_⍺ = transpose(S_minhalf)*F_⍺*S_minhalf #Transform Fock matrix
             eps_⍺, C′_⍺ = eigen(F′_⍺) #Diagonalize transformed Fock to get eps and C'
             C_⍺ = S_minhalf*C′_⍺ # Get C from C'
             P_⍺_old=deepcopy(P_⍺) #Keep copy of old P
             P_⍺ = makedensity(C_⍺, dim, numoccorbs_⍺, 1.0) #Calculate new P from C
-            #Solve β equations
+            #Solve β part
             F_β = Fock(Hcore,P_β,P_⍺,dim,tei) #Update Fock-matrix beta
-            F_β = levelshift_control(F_β,levelshift,numoccorbs_β,dim,P_RMS,rmsDP_threshold,iter, turnoff_threshold=lshift_thresh)
+            F_β = levelshift_control(F_β,levelshift,numoccorbs_β,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
             F′_β = transpose(S_minhalf)*F_β*S_minhalf #Transform Fock matrix
             eps_β, C′_β = eigen(F′_β) #Diagonalize transformed Fock to get eps and C'
             C_β = S_minhalf*C′_β # Get C from C'

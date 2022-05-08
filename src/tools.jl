@@ -61,3 +61,13 @@ function makeoccupationarray(norb,dim,val)
     return occ
 end
 
+#Check whether spin multiplicity is consistent with the nuclear charge and total charge
+function check_multiplicity(num_el,charge,mult)
+    unpaired_electrons=mult-1
+    result = map(iseven, (num_el,unpaired_electrons))
+    if result[1] != result[2]
+        println("The spin multiplicity $mult ($unpaired_electrons unpaired electrons) is incompatible with the total number of electrons $num_el")
+        println("Exiting!")
+        exit()
+    end
+end
