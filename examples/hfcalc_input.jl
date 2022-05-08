@@ -46,7 +46,7 @@ O3_triplet = create_fragment(xyzfile="o3.xyz", charge=0, mult=3)
 basisname="STO-3g"
 
 #@time energy= jHF(H2O, basisname; maxiter=120, fock_algorithm="loop")#, levelshift=20.0, lshift_thresh=1e-4
-@time energy= jHF(O3_triplet, basisname; maxiter=500, fock_algorithm="turbo", HFtype="UHF", levelshift=2.0, lshift_thresh=1e-4,
+@time energy= jHF(H2O, basisname; maxiter=500, fock_algorithm="turbo", HFtype="UHF", levelshift=2.0, lshift_thresh=1e-4,
     tei_type="4c", print_final_matrices=true, debugprint=false, printlevel=1)
 #@time energy= jHF(H2O, basisname; debugprint=false, maxiter=120, fock_algorithm="tullio")
 #@time energy= jHF(H2O, basisname; debugprint=false, maxiter=120, fock_algorithm="tensor")

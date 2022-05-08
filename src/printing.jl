@@ -152,7 +152,7 @@ function print_Mulliken(charges,elems,spinpops)
     pretty_table(data; header=["Atom", "Element", "Charge", "Spin pop."], crop=:none,
         formatters = ft_printf("%10.6f", [3,4]))
     @printf("\nSum of charges: %.4f\n", sum(charges))
-    @printf("\nSum of spin populations: %.4f\n", sum(spinpops))
+    @printf("Sum of spin populations: %.4f\n", sum(spinpops))
 end
 
 """
@@ -185,8 +185,8 @@ end
 print_MO_energies: Print MO energies for closed-shell system (using pretty tables)
 """
 function print_MO_energies(occ,mos)
-    #println("MO Energies (closed-shell)")
     println("\n")
+    #println("MO Energies (closed-shell)")
     #print(Crayon(foreground = :yellow, bold = true), "-"^30*"\n",Crayon(reset=true))
     print(Crayon(foreground = :yellow, bold = true), "MO Energies (closed-shell)\n",Crayon(reset=true))
     #print(Crayon(foreground = :yellow, bold = true), "-"^30*"\n",Crayon(reset=true))
@@ -203,9 +203,11 @@ end
 print_MO_energies: Print MO energies for open-shell system (using pretty tables)
 """
 function print_MO_energies(occ_⍺, occ_β, mos_⍺, mos_β)
-    println("-"^30)
-    println("MO Energies (open-shell)")
-    println("-"^30)
+    println("\n")
+    #println("-"^30)
+    #println("MO Energies (open-shell)")
+    #println("-"^30)
+    print(Crayon(foreground = :yellow, bold = true), "MO Energies (open-shell)\n",Crayon(reset=true))
     print(Crayon(foreground = :red, bold = true), "                              ⍺", Crayon(foreground = :blue, bold = true),"                                    β",Crayon(reset=true))
     print("\n")
     mos_⍺_ev=mos_⍺*27.211399
