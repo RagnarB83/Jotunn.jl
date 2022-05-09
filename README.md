@@ -63,7 +63,10 @@ export JULIA_LOAD_PATH=/path/to/Jotunn/src:$JULIA_LOAD_PATH
 
 *Option 2. Install package:*
 
-*NOT YET READY...*
+Launch a Julia session and copy-paste:
+```julia
+using Pkg; Pkg.add(url="https://github.com/RagnarB83/Jotunn.jl")
+```
 
 #
 ### How to use:
