@@ -5,7 +5,7 @@ Jotunn: jHF: a RHF/UHF program
 function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile="none", maxiter=120, 
     print_final_matrices=false, rmsDP_threshold=5e-9, maxDP_threshold=1e-7, tei_type="4c",
     energythreshold=1e-8, debugprint=false, fock_algorithm="turbo", levelshift=1.0, lshift_thresh=0.001,
-    printlevel=2)
+    printlevel=1)
 
     print_program_header()
     global debugflag  = debugprint
@@ -20,12 +20,12 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
     ##########################
     # BASIC SYSTEM SETUP
     ##########################
-    #Num. electrons and nuc-nuc repulsion from geometry
+    #Num. electrons and nuc-nuc repulsion from total charge and nuclear charges
     sum_nuccharge=sum([elem_to_nuccharge(el) for el in fragment.elems])
     num_el=floor(Int64,sum_nuccharge-fragment.charge)
     E_ZZ=nuc_nuc_repulsion(fragment.elems,fragment.coords)
 
-    #Check whether multiplicity makes sense before continuing
+    #Check whether chosen multiplicity makes sense before continuing
     check_multiplicity(num_el,fragment.charge,fragment.mult)
 
     #RHF vs. UHF
@@ -34,7 +34,7 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
             println("RHF and multiplicity > 1 is not possible. Exiting!")
             exit()
         end
-        #Doubly occupied orbitals
+        #Num occ orbitals in RHF
         numoccorbs=Int64(num_el/2)
         unpaired_electrons=0
     elseif HFtype == "UHF"
@@ -56,43 +56,35 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
     ##########################
     #Setting up 1-electron and 2-electron integrals
     println("Integrals provided via GaussianBasis.jl library")       
-    #Basis set object creation
+    #Basis set object creation by GaussianBasis
     bset = basis_set_create(basisset,fragment.elems,fragment.coords; basisfile=basisfile)
     dim = bset.nbas
     #Simple array of atom indices that maps onto bfs
     bset_atom_mapping = bf_atom_mapping(bset)
     println("\nCalculating 1-electron integrals")
+    #Calculating 1-electron integrals
     T = kinetic(bset)
     V = nuclear(bset)
     S = overlap(bset)
+    Hcore = T + V #Combining T and V into Hcore
+    
+    #Overlap diagonalization
+    Sval,Svec = eigen(S)
+    lowest_S_eigenval=minimum(Sval)
+    #Transformation matrix
+    SVAL_minhalf = Diagonal(Sval)^-0.5
+    Stemp = SVAL_minhalf*transpose(Svec)
+    S_minhalf = Svec * Stemp
 
     println("Calculating 2-electron integrals")
-    #Two-electron integrals: calculate and store
-    #tei_type: 4c, sparse4c
+    #Calculating two-electron integrals: tei_type: 4c, sparse4c
     @time tei = tei_calc(bset,tei_type)
 
     ##########################
     # CHOOSING FOCK ALGORITHM
     ##########################
-    #Choosing Fock algorithm (RHF vs. UHF, user-defined bs. best for small-system)
+    #Choosing Fock algorithm (RHF vs. UHF, user-defined vs. best for small-system)
     Fock,fock_algorithm = choose_Fock(HFtype,fock_algorithm,dim,tei_type)
-    #Fock=Fock_loop_sparse
-    #fock_algorithm="sparse"
-
-
-    ##########################
-    # stuff
-    ##########################
-    #Forming Hcore matrix from kinetic and nuclear-attraction matrices
-    Hcore = T + V 
-    
-    #Overlap diagonalization and transformation matrices
-    Sval,Svec = eigen(S)
-    lowest_S_eigenval=minimum(Sval)
-    
-    SVAL_minhalf = Diagonal(Sval)^-0.5
-    Stemp = SVAL_minhalf*transpose(Svec)
-    S_minhalf = Svec * Stemp
 
     ##########################
     # GUESS
@@ -118,21 +110,15 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
     # SCF
     ##########################
     println("\nBeginning SCF iterations")
-    #Initializing
+    #Initializing some variables
     energy_old=0.0; energy=0.0; P_RMS=9999; finaliter=nothing
     eps_⍺=zeros(dim); eps_β=zeros(dim); eps=zeros(dim);
     global levelshift_flag = true
+
     #SCF loop beginning
-    if printlevel == 1
-        #println("Iteration     Energy deltaE  RMS-DP Max-DP Levelshift")
-        @printf("%6s %17s %17s %17s %17s %10s %10s\n", "Iter", "Energy", "deltaE", "RMS-DP", "Max-DP", "Levelshift", "Damping")
-    end
+    if printlevel == 1 @printf("%6s %17s %17s %17s %17s %10s %10s\n", "Iter", "Energy", "deltaE", "RMS-DP", "Max-DP", "Levelshift", "Damping") end
     @time for iter in 1:maxiter
-        #Printing per iteration
-        if printlevel > 1
-            #Fair amount of printing
-            print_iteration_header(iter)
-        end
+        if printlevel > 1 print_iteration_header(iter) end
         if HFtype == "RHF"
             F = Fock(Hcore,P,dim,tei) #Update Fock-matrix
             #if iter == 2
@@ -149,9 +135,7 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
             P = makedensity(C, dim, numoccorbs) #Calculate new P from C
             energy = E_ZZ + 0.5 * tr((Hcore+F)*P) #Calculate energy
 
-            if debugprint == true 
-                write_matrices(F,C,P) 
-            end
+            if debugprint == true write_matrices(F,C,P) end
         else
             #Solve ⍺ part
             F_⍺ = Fock(Hcore,P_⍺,P_β,dim,tei) #Update Fock-matrix alpha
@@ -177,8 +161,6 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
             energy = E_ZZ + 0.5 * tr((Hcore+F_⍺)*P_⍺) + 0.5 * tr((Hcore+F_β)*P_β)  #Calculate energy
         end
 
-
-
         ##########################
         # CONVERGENCE CHECK
         ##########################
@@ -191,7 +173,6 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
             P_MaxE,maxDP_threshold,levelshift_flag)
 
         if P_MaxE < maxDP_threshold && P_RMS < rmsDP_threshold && abs(deltaE) < energythreshold
-            #println("\n                              SCF converged in $iter iterations! Hell yeah! 🎉")
             print(Crayon(foreground = :green, bold = true), "\n                              SCF converged in $iter iterations! Hell yeah! 🎉\n\n",Crayon(reset=true))
             finaliter=iter
             if HFtype == "RHF"
@@ -221,9 +202,9 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
             return nothing
         end
     end
-    #####################################
-    # POPULATION ANALYSIS AND PROPERTIES
-    #####################################
+    #################################################
+    # ORBITALS, POPULATION ANALYSIS AND PROPERTIES
+    #################################################
     #SCF loop done. Calculate and print properties
     #ORBITALS AND POPULATION ANALYSIS
     if HFtype=="RHF"
@@ -252,7 +233,7 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
     end
 
     #####################################
-    # FINAL RESULTS
+    # PRINT FINAL RESULTS
     #####################################
     print_final_results(energy,fragment,num_el,basisset,HFtype,fock_algorithm,finaliter)
 
