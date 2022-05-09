@@ -9,11 +9,14 @@ http://vergil.chemistry.gatech.edu/notes/diis/node1.html
 - electric field gradient
 - Cube files for MOs and densities
 - LibXC interface: https://github.com/JuliaMolSim/Libxc.jl
-- DFT grids
+- DFT grids. Interface to library? 
+    - https://github.com/dftlibs/numgrid
+    - https://github.com/stefabat/Lebedev.jl
 - Fix bug: GaussianBasis.jl sensitive to scientific notation
 - Read-in basis: Normalize contraction coefficients
 - Gradient?
 - TDDFT?
+- Test Libint library also via Lints: https://github.com/FermiQC/Lints.jl
 
 
 

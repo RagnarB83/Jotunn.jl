@@ -44,3 +44,40 @@ function levelshift_Fock(F,parameter, occ, dim)
     end
     return F
 end
+
+
+"""
+damping_control: Control and do damping during SCF
+
+function damping_control(P,dampingpar,numorbs,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=0.001)
+    global damping_flag
+    if printlevel > 1 println("Levelshift: $levelshift_flag") end
+    if isnothing(levelshift) == false
+        if levelshift_flag == true
+            #println("Iter: $iter P_RMS: $P_RMS (threshold to turn off levelshift:", turnoff_threshold)
+            if P_RMS > turnoff_threshold
+                if printlevel > 1 println("Level shift active. Adding levelshift: $levelshift in iteration $iter") end
+                F = levelshift_Fock(F,levelshift,numorbs,dim)
+            else
+                if printlevel > 1
+                    println("P_RMS=$P_RMS less than threshold!")
+                    println("Levelshifting is off!")
+                end
+                #println("Removing levelshift in iteration $iter")
+                #F = levelshift_Fock(F,-levelshift,numorbs,dim)
+                levelshift_flag=false
+            end
+        end
+    end
+    return F
+end
+"""
+
+
+"""
+damping: mixing of density
+Currently static
+"""
+function damping(Pnew,Pold;mixpar=0.4)
+    Pnew_damped=(1-mixpar)Pnew+mixpar*Pold
+end

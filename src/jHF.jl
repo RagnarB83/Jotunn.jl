@@ -120,12 +120,16 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
     @time for iter in 1:maxiter
         if printlevel > 1 print_iteration_header(iter) end
         if HFtype == "RHF"
+            #Possible damping. Damping P before making Fock
+            #P = damping_control(P,P_old)
             F = Fock(Hcore,P,dim,tei) #Update Fock-matrix
             #if iter == 2
             #    println("iter: $iter")
             #    println("F: $F")
             #    exit()
             #end
+
+
             #Possible levelshifting
             F = levelshift_control(F,levelshift,numoccorbs,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
             F′ = transpose(S_minhalf)*F*S_minhalf #Transform Fock matrix

@@ -7,5 +7,5 @@ H 0.0 0.0 0.74
 """, charge=0, mult=1)
 
 #Simple call
-energy= jHF(H2, "STO-3G")
+energy= jHF(H2, "sto-3g")
 println("Energy from Jotunn: $energy Eh")

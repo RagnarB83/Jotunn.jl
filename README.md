@@ -84,7 +84,7 @@ H2 = create_fragment(coords_string="""
 H 0.0 0.0 0.0
 H 0.0 0.0 0.74
 """, charge=0, mult=1)
-jHF(H2, "STO-3G")
+jHF(H2, "sto-3g")
 ```
 
 
@@ -122,7 +122,7 @@ H 0.0 0.0 0.74
 """, charge=0, mult=1)
 
 #Simple call
-energy= jHF(H2, "STO-3G")
+energy= jHF(H2, "sto-3")
 println("Energy from Jotunn: $energy Eh")
  ```
 **moreoptions-input.jl:**
@@ -131,7 +131,7 @@ using Jotunn
 H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
 
 #More keywords
-energy= jHF(H2O, "STO-3G"; maxiter=200, fock_algorithm="turbo", 
+energy= jHF(H2O, "sto-3g"; maxiter=200, fock_algorithm="turbo", printlevel=2,
     HFtype="RHF", levelshift=2.0, lshift_thresh=1e-4, tei_type="4c", 
     print_final_matrices=true, debugprint=true)
  ```
@@ -141,8 +141,8 @@ energy= jHF(H2O, "STO-3G"; maxiter=200, fock_algorithm="turbo",
 using Jotunn
 H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
 #All features
-energy = jHF(H2O, "STO-3G"; HFtype="UHF", guess="hcore", 
-    basisfile="none", maxiter=200, 
+energy = jHF(H2O, "sto-3g"; HFtype="UHF", guess="hcore", 
+    basisfile="none", maxiter=200, printlevel=1,
     print_final_matrices=false, debugprint=false, 
     rmsDP_threshold=5e-9, maxDP_threshold=1e-7, energythreshold=1e-8, 
     tei_type="4c", fock_algorithm="turbo", 
@@ -184,7 +184,7 @@ Providing guess for density matrix
 CALCULATION SETTINGS
 ====================== =================
               HF type              RHF  
-            Basis set         def2-SVP  
+            Basis set         def2-svp  
   No. basis functions               24  
                 Guess            hcore  
       2-electron type               4c  
@@ -321,7 +321,7 @@ FINAL RESULTS
       Final HF energy     -75.96044815  
      Molecule formula              OHH  
   Number of electrons               10  
-            Basis set         def2-SVP  
+            Basis set         def2-svp  
               HF type              RHF  
        Fock algorithm             loop  
        SCF iterations               52  

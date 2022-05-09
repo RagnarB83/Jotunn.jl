@@ -43,7 +43,7 @@ O3_triplet = create_fragment(xyzfile="o3.xyz", charge=0, mult=3)
 #@time Acetic = create_fragment(xyzfile="acetic.xyz", charge=0, mult=1)
 
 #Call jHF on fragment with input basis
-basisname="def2-SVP"
+basisname="def2-tzvpp"
 
 #@time energy= jHF(H2O, basisname; maxiter=120, fock_algorithm="loop")#, levelshift=20.0, lshift_thresh=1e-4
 @time energy= jHF(H2O, basisname; maxiter=500, fock_algorithm="turbo", HFtype="RHF", levelshift=2.0, lshift_thresh=1e-4,
@@ -60,6 +60,6 @@ basisname="def2-SVP"
 #energy1 = jHF(elems, coords, charge, mult, basis, basisfile="sto3g-orca.basis")
 #energy1 = jHF(H2, "read_file", basisfile="sto3g-orca.basis")
 #energy1b = jHF(H2, "read_file", basisfile="sto3g-orca-he-normalized.basis")
-#energy2= jHF(H2, "STO-3G")
-#energy3= jHF(H2, "def2-TZVP")
+#energy2= jHF(H2, "sto-3g")
+#energy3= jHF(H2, "def2-tzvp")
 #energy = jHF(H2, integrals_from_file=true)
