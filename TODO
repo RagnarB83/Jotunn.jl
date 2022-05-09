@@ -9,11 +9,11 @@ http://vergil.chemistry.gatech.edu/notes/diis/node1.html
 - electric field gradient
 - Cube files for MOs and densities
 - LibXC interface: https://github.com/JuliaMolSim/Libxc.jl
-- Gradient?
-- TDDFT?
+- DFT grids
 - Fix bug: GaussianBasis.jl sensitive to scientific notation
 - Read-in basis: Normalize contraction coefficients
-
+- Gradient?
+- TDDFT?
 
 
 

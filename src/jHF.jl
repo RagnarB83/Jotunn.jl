@@ -83,7 +83,7 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
     ##########################
     # CHOOSING FOCK ALGORITHM
     ##########################
-    #Choosing Fock algorithm (RHF vs. UHF, user-defined vs. best for small-system)
+    #Choosing Fock algorithm (based on RHF vs. UHF, user-defined vs. best for small-system)
     Fock,fock_algorithm = choose_Fock(HFtype,fock_algorithm,dim,tei_type)
 
     ##########################

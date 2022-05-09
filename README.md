@@ -7,7 +7,7 @@ Might one day turn into something useful.
 
 ## Current features
 - 1 and 2-electron integrals via [GaussianBasis.jl](https://github.com/FermiQC/GaussianBasis.jl) and [libcint](https://github.com/sunqm/libcint).
-- RHF and UHF algorithm with full 4-rank tensor. 
+- Conventional RHF and UHF algorithm with full rank-4 tensor.
 - Fock matrix speedup via [LoopVectorization.jl](https://github.com/JuliaSIMD/LoopVectorization.jl)
 - Mulliken population analysis (RHF and UHF)
 - Mayer bond orders (RHF and UHF)
@@ -26,6 +26,7 @@ Might one day turn into something useful.
     - Better guess than Hcore
 - DFT support:
     - interface to LibXC
+    - DFT grids
     - hybrid-DFT
 - Support broken-symmetry guess
 - Simple electric properties (dipole, EFG)

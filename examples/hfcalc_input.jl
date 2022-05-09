@@ -47,7 +47,7 @@ basisname="def2-SVP"
 
 #@time energy= jHF(H2O, basisname; maxiter=120, fock_algorithm="loop")#, levelshift=20.0, lshift_thresh=1e-4
 @time energy= jHF(H2O, basisname; maxiter=500, fock_algorithm="turbo", HFtype="RHF", levelshift=2.0, lshift_thresh=1e-4,
-    tei_type="4c", print_final_matrices=true, debugprint=false, printlevel=2)
+    tei_type="4c", print_final_matrices=true, debugprint=false, printlevel=1)
 #@time energy= jHF(H2O, basisname; debugprint=false, maxiter=120, fock_algorithm="tullio")
 #@time energy= jHF(H2O, basisname; debugprint=false, maxiter=120, fock_algorithm="tensor")
 
