@@ -45,7 +45,7 @@ function levelshift_Fock(F,parameter, occ, dim)
     return F
 end
 
-
+#=
 """
 damping_control: Control and do damping during SCF
 
@@ -72,7 +72,7 @@ function damping_control(P,dampingpar,numorbs,dim,P_RMS,rmsDP_threshold,iter,pri
     return F
 end
 """
-
+=#
 
 """
 damping: mixing of density
