@@ -12,9 +12,10 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
 
     #Removing old matrix files if present
     if debugprint == true || print_final_matrices == true
-        rm("Fmatrix", force=true)
-        rm("Cmatrix", force=true)
-        rm("Pmatrix", force=true)
+        for matrixfile in ["Fmatrix","Cmatrix","Pmatrix","C_a_matrix","C_b_matrix","F_a_matrix",
+            "F_b_matrix","P_a_matrix","P_b_matrix"]
+            rm(matrixfile, force=true)
+        end
     end
 
     ##########################
@@ -163,6 +164,8 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
             P_old=P_⍺_old+P_β_old
             P_⍺_β=P_⍺-P_β #spin density matrix
             energy = E_ZZ + 0.5 * tr((Hcore+F_⍺)*P_⍺) + 0.5 * tr((Hcore+F_β)*P_β)  #Calculate energy
+
+            #if debugprint == true write_matrices(F,C,P) end
         end
 
         ##########################
@@ -177,7 +180,8 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
             P_MaxE,maxDP_threshold,levelshift_flag)
 
         if P_MaxE < maxDP_threshold && P_RMS < rmsDP_threshold && abs(deltaE) < energythreshold
-            print(Crayon(foreground = :green, bold = true), "\n                              SCF converged in $iter iterations! Hell yeah! 🎉\n\n",Crayon(reset=true))
+            print(Crayon(foreground = :green, bold = true), 
+                "\n                              SCF converged in $iter iterations! Hell yeah! 🎉\n\n",Crayon(reset=true))
             finaliter=iter
             if HFtype == "RHF"
                 print_energy_contributions(energy,Hcore,F,P,T,E_ZZ)
@@ -191,12 +195,12 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
                 #    print_energy_contributions(energy,Hcore,F,P,T,E_ZZ)
                 if print_final_matrices == true 
                     write_matrix_to_file(P,"Pmatrix")
-                    write_matrix_to_file(C_⍺,"C_amatrix")
-                    write_matrix_to_file(C_β,"C_bmatrix")
-                    write_matrix_to_file(F_⍺,"F_amatrix")
-                    write_matrix_to_file(F_β,"F_bmatrix")
-                    write_matrix_to_file(P_⍺,"P_amatrix")
-                    write_matrix_to_file(P_β,"P_bmatrix")
+                    write_matrix_to_file(C_⍺,"C_a_matrix")
+                    write_matrix_to_file(C_β,"C_b_matrix")
+                    write_matrix_to_file(F_⍺,"F_a_matrix")
+                    write_matrix_to_file(F_β,"F_b_matrix")
+                    write_matrix_to_file(P_⍺,"P_a_matrix")
+                    write_matrix_to_file(P_β,"P_b_matrix")
                 end
             end
             break #Break from loop

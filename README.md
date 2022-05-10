@@ -1,5 +1,5 @@
 # Jotunn: a simple quantum chemistry program in Julia
-RHF/UHF code written in in Julia. 
+RHF/UHF code written in in Julia (with integrals provided by libcint via GaussianBasis.jl). 
 Primarily written to to be a simple, but general and easy-to-understand RHF/UHF code without being horribly slow.
 Might one day turn into something useful.
 
@@ -125,7 +125,7 @@ H 0.0 0.0 0.74
 """, charge=0, mult=1)
 
 #Simple call
-energy= jHF(H2, "sto-3")
+energy= jHF(H2, "sto-3g")
 println("Energy from Jotunn: $energy Eh")
  ```
 **moreoptions-input.jl:**

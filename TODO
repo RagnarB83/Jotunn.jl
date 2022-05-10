@@ -1,6 +1,7 @@
 - Finalize package: Platform, dependencies, implement as Package (without registry)
 - Write tests for package
 - Add dashed line below occupied orbitals in MO energy output
+- Finish F,P,C matrix writing for UHF per iteration and cleanup in general
 - Implement Fock using sparse version of 2ERI from GaussianBasis.jl
 - Better guess
 - DIIS: https://www.chem.fsu.edu/~deprince/programming_projects/diis/
