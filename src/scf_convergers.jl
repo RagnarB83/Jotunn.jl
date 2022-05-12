@@ -9,18 +9,38 @@ function deltaPcheck(P, Pold)
     return rms_e, max_e
 end
 
+
+"""
+diis_control: Do DIIS extrapolation or not
+"""
+function diis_control(F′,diis_error_matrices,Fockmatrices,diis,diis_size,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=diis_thresh)
+
+    if diis == true
+        println("DIIS true")
+        #Do extrapolation based on F′ and diismatrix
+        newF′=F′
+        return newF′
+    else
+        #No DIIS: unchanged F′
+        #println("No DIIS")
+        return F′
+    end
+end
+
 """
 levelshift_control: Control and do levelshifting of Fock matrix during SCF
 """
-function levelshift_control(F,levelshift,numorbs,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=0.001)
+function levelshift_control(F,levelshift,levelshift_val,numorbs,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=0.001)
     global levelshift_flag
-    if printlevel > 1 println("Levelshift: $levelshift_flag") end
-    if isnothing(levelshift) == false
+    printdebug("levelshift option: $levelshift")
+    if levelshift == true
+        printdebug("Levelshift option is on")
+        if printlevel > 1 println("Levelshift flag: $levelshift_flag") end
         if levelshift_flag == true
             #println("Iter: $iter P_RMS: $P_RMS (threshold to turn off levelshift:", turnoff_threshold)
             if P_RMS > turnoff_threshold
                 if printlevel > 1 println("Level shift active. Adding levelshift: $levelshift in iteration $iter") end
-                F = levelshift_Fock(F,levelshift,numorbs,dim)
+                F = levelshift_Fock(F,levelshift_val,numorbs,dim)
             else
                 if printlevel > 1
                     println("P_RMS=$P_RMS less than threshold!")
@@ -31,6 +51,8 @@ function levelshift_control(F,levelshift,numorbs,dim,P_RMS,rmsDP_threshold,iter,
                 levelshift_flag=false
             end
         end
+    else
+        printdebug("Levelshift option is off")
     end
     return F
 end
@@ -45,39 +67,40 @@ function levelshift_Fock(F,parameter, occ, dim)
     return F
 end
 
-#=
+
 """
 damping_control: Control and do damping during SCF
-
-function damping_control(P,dampingpar,numorbs,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=0.001)
+"""
+function damping_control(P,Pold,damping,dampingpar,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=0.001)
     global damping_flag
-    if printlevel > 1 println("Levelshift: $levelshift_flag") end
-    if isnothing(levelshift) == false
-        if levelshift_flag == true
-            #println("Iter: $iter P_RMS: $P_RMS (threshold to turn off levelshift:", turnoff_threshold)
+    if printlevel > 1 println("Damping: $damping_flag") end
+    if isnothing(dampingpar) == false
+        if damping_flag == true
+            #println("Iter: $iter P_RMS: $P_RMS (threshold to turn off damping:", turnoff_threshold)
             if P_RMS > turnoff_threshold
-                if printlevel > 1 println("Level shift active. Adding levelshift: $levelshift in iteration $iter") end
-                F = levelshift_Fock(F,levelshift,numorbs,dim)
+                if printlevel > 1 println("Damping active. Adding damping $dampingpar in iteration $iter") end
+                #println("P before damping: $P")
+                P = damping_P(P,Pold;mixpar=dampingpar)
+                #println("P after damping: $P")
             else
                 if printlevel > 1
                     println("P_RMS=$P_RMS less than threshold!")
-                    println("Levelshifting is off!")
+                    println("Damping is off!")
                 end
-                #println("Removing levelshift in iteration $iter")
-                #F = levelshift_Fock(F,-levelshift,numorbs,dim)
-                levelshift_flag=false
+                #println("Removing damping in iteration $iter")
+                damping_flag=false
             end
         end
     end
-    return F
+    return P
 end
-"""
-=#
+
+
 
 """
 damping: mixing of density
 Currently static
 """
-function damping(Pnew,Pold;mixpar=0.4)
+function damping_P(Pnew,Pold;mixpar=0.4)
     Pnew_damped=(1-mixpar)Pnew+mixpar*Pold
 end

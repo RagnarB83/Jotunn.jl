@@ -84,8 +84,8 @@ read_coordsstring: Read multi-line coordinates string and get elements and coord
 function read_coordsstring(mlstring)
     elems=[]
     numlines=count("\n",mlstring)
-    #println("Reading $numlines lines")
-    coords=zeros(numlines,3)
+    #Temporary array
+    tempcoords=[]
     atomcount=0
     for (index,line) in enumerate(split(mlstring,"\n"))
         if length(line) >0
@@ -95,12 +95,11 @@ function read_coordsstring(mlstring)
            x=parse(Float64,arr[2])
            y=parse(Float64,arr[3])
            z=parse(Float64,arr[4])
-
-           coords[index,1]=x
-           coords[index,2]=y
-           coords[index,3]=z
+           push!(tempcoords,[x,y,z]) #Pushing to temp aray
         end
-    end 
+    end
+    #Convert coords from vector of vectors to matrix
+    coords=mapreduce(permutedims, vcat, tempcoords)
     return elems,coords
 end
 
@@ -116,7 +115,7 @@ function read_xyzfile(filename)
             "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta",
             "W", "Re", "Os", "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa",
             "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr"]
-    println("Reading coordinates from XYZfile $filename ")
+    println("Reading coordinates from XYZ-file $filename ")
     elems=[]
     file = open(filename, "r")
     numatoms=nothing

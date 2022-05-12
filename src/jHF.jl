@@ -2,10 +2,13 @@ export jHF
 """
 Jotunn: jHF: a RHF/UHF program
 """
-function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile="none", maxiter=120, 
-    print_final_matrices=false, rmsDP_threshold=5e-9, maxDP_threshold=1e-7, tei_type="4c",
-    energythreshold=1e-8, debugprint=false, fock_algorithm="turbo", levelshift=1.0, lshift_thresh=0.001,
-    printlevel=1)
+function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="hcore", basisfile::String="none", maxiter::Int64=120, 
+    print_final_matrices::Bool=false, rmsDP_threshold::Float64=5e-9, maxDP_threshold::Float64=1e-7, tei_type::String="4c",
+    energythreshold::Float64=1e-8, debugprint::Bool=false, fock_algorithm::String="turbo", 
+    levelshift::Bool=false, levelshift_val::Float64=0.10, lshift_thresh::Float64=0.01,
+    damping::Bool=true, damping_val::Float64=0.4, damping_thresh::Float64=0.01,
+    diis::Bool=false, diis_size::Int64=7, diis_thresh::Float64=0.01,
+    printlevel::Int64=1)
 
     print_program_header()
     global debugflag  = debugprint
@@ -44,7 +47,7 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
         paired_el_half=paired_el/2
         numoccorbs_⍺=trunc(Int64,paired_el_half+unpaired_electrons)
         numoccorbs_β=trunc(Int64,paired_el_half)
-        #TODO: broken-symmetry case
+        #TODO: broken-symmetry spin-coupled case
     else
         println("Unknown HFtype! Exiting.")
         exit()
@@ -91,7 +94,7 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
     # GUESS
     ##########################
     #Create initial guess for density matrix
-    println("Providing guess for density matrix\n")
+    println("Providing guess for density matrix")
     if guess == "hcore"
         #Setting P to 0. Means that Fock matrix becomes F = Hcore + 0. See Fock functions.
         if HFtype=="RHF"
@@ -104,8 +107,11 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
         println("unknown guess")
         exit()
     end
-
-    print_calculation_setup(HFtype,basisset,dim,guess,tei_type,fock_algorithm,lowest_S_eigenval)
+    guess_energy= E_ZZ + 0.5 * tr((Hcore+Hcore)*P) #Calculate guess energy
+    println("Energy of guess: $guess_energy Eh\n")
+    print_calculation_settings(HFtype,basisset,dim,guess,tei_type,
+        fock_algorithm,lowest_S_eigenval,levelshift,levelshift_val,lshift_thresh,
+        damping,damping_val,damping_thresh,diis,diis_size,diis_thresh)
 
     ##########################
     # SCF
@@ -113,27 +119,41 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
     println("\nBeginning SCF iterations")
     #Initializing some variables
     energy_old=0.0; energy=0.0; P_RMS=9999; finaliter=nothing
-    eps_⍺=zeros(dim); eps_β=zeros(dim); eps=zeros(dim);
-    global levelshift_flag = true
-
+    if HFtype=="RHF" 
+        eps=zeros(dim)
+        P_old=deepcopy(P)
+    else
+        eps_⍺=zeros(dim); eps_β=zeros(dim); 
+        P_⍺_old=deepcopy(P_⍺); P_β_old=deepcopy(P_β)
+    end
+    #Initializing levelshift and damping flags
+    if levelshift == true global levelshift_flag = true else levelshift_flag = false end
+    if damping == true global damping_flag = true; else damping_flag = false end
+    if diis == true global diis_flag = true; diis_error_matrices=nothing; Fockmatrices=nothing; 
+    else global diis_flag = false;diis_error_matrices=nothing; Fockmatrices=nothing end
+    
     #SCF loop beginning
-    if printlevel == 1 @printf("%6s %17s %17s %17s %17s %10s %10s\n", "Iter", "Energy", "deltaE", "RMS-DP", "Max-DP", "Levelshift", "Damping") end
+    if printlevel == 1 @printf("%4s%15s%16s%14s%14s%8s%8s%8s\n", "Iter", "Energy", "deltaE", "RMS-DP", "Max-DP", "Lshift", "Damp", "DIIS") end
+    
     @time for iter in 1:maxiter
         if printlevel > 1 print_iteration_header(iter) end
         if HFtype == "RHF"
-            #Possible damping. Damping P before making Fock
-            #P = damping_control(P,P_old)
-            F = Fock(Hcore,P,dim,tei) #Update Fock-matrix
+            #Possible damping of P before making Fock
+            P = damping_control(P,P_old,damping,damping_val,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=damping_thresh)
+            F = Fock(Hcore,P,dim,tei) #Make Fock-matrix
             #if iter == 2
             #    println("iter: $iter")
             #    println("F: $F")
             #    exit()
             #end
-
-
-            #Possible levelshifting
-            F = levelshift_control(F,levelshift,numoccorbs,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
+            
+            #Possible levelshifting of Fock before diagonalization
+            F = levelshift_control(F,levelshift,levelshift_val,numoccorbs,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
             F′ = transpose(S_minhalf)*F*S_minhalf #Transform Fock matrix
+
+            # Possible DIIS extrapolation of F′ matrix before diagonalization
+            F′ = diis_control(F′,diis_error_matrices,Fockmatrices,diis,diis_size,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=diis_thresh)
+
             eps, C′ = eigen(F′) #Diagonalize transformed Fock to get eps and C'
             C = S_minhalf*C′ # Get C from C'
             P_old=deepcopy(P) #Keep copy of old P
@@ -142,9 +162,13 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
 
             if debugprint == true write_matrices(F,C,P) end
         else
+            #Possible damping of P matrices before making Fock
+            P_⍺ = damping_control(P_⍺,P_⍺_old,damping,damping_val,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=damping_thresh)
+            P_β = damping_control(P_β,P_β_old,damping,damping_val,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=damping_thresh)
+            
             #Solve ⍺ part
             F_⍺ = Fock(Hcore,P_⍺,P_β,dim,tei) #Update Fock-matrix alpha
-            F_⍺ = levelshift_control(F_⍺,levelshift,numoccorbs_⍺,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
+            F_⍺ = levelshift_control(F_⍺,levelshift,levelshift_val,numoccorbs_⍺,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
             F′_⍺ = transpose(S_minhalf)*F_⍺*S_minhalf #Transform Fock matrix
             eps_⍺, C′_⍺ = eigen(F′_⍺) #Diagonalize transformed Fock to get eps and C'
             C_⍺ = S_minhalf*C′_⍺ # Get C from C'
@@ -152,7 +176,7 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
             P_⍺ = makedensity(C_⍺, dim, numoccorbs_⍺, 1.0) #Calculate new P from C
             #Solve β part
             F_β = Fock(Hcore,P_β,P_⍺,dim,tei) #Update Fock-matrix beta
-            F_β = levelshift_control(F_β,levelshift,numoccorbs_β,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
+            F_β = levelshift_control(F_β,levelshift,levelshift_val,numoccorbs_β,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
             F′_β = transpose(S_minhalf)*F_β*S_minhalf #Transform Fock matrix
             eps_β, C′_β = eigen(F′_β) #Diagonalize transformed Fock to get eps and C'
             C_β = S_minhalf*C′_β # Get C from C'
@@ -177,7 +201,7 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
 
         #Printing per iteration
         iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,rmsDP_threshold,
-            P_MaxE,maxDP_threshold,levelshift_flag)
+            P_MaxE,maxDP_threshold,levelshift_flag,damping_flag,diis_flag)
 
         if P_MaxE < maxDP_threshold && P_RMS < rmsDP_threshold && abs(deltaE) < energythreshold
             print(Crayon(foreground = :green, bold = true), 
@@ -207,7 +231,9 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
         end
         if iter == maxiter
             println("Failed to converge in $maxiter iterations!")
-            return nothing
+            #Gathering results into Dict and returning
+            Resultsdict=Dict("energy"=>"None","finaliter"=>"Failed ($maxiter iters)")
+            return Resultsdict
         end
     end
     #################################################
@@ -245,5 +271,7 @@ function jHF(fragment, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile
     #####################################
     print_final_results(energy,fragment,num_el,basisset,HFtype,fock_algorithm,finaliter)
 
-    return energy
+    #Gathering results into Dict and returning
+    Resultsdict=Dict("energy"=>energy,"finaliter"=>finaliter)
+    return Resultsdict
 end

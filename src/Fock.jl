@@ -68,10 +68,11 @@ end
 
 """
 Fock_loop_sparse: Sparse-integral loop-version RHF case of the Fock-matrix. 
+Not ready
 """
 #Fock_loop(Hcore,P,dim,indices,tei)
 function Fock_loop_sparse(Hcore,P,dim,tei)
-    println("THIS IS Fock_loop_sparse")
+    println("THIS IS Fock_loop_sparse (does not work yet")
     JK = zeros(dim,dim)
     sparse_length=length(tei[1])
     #Looping over tuples of indices known not to be zero

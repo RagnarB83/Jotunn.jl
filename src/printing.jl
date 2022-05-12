@@ -4,9 +4,9 @@
 """
 printdebug: Simple print function that only prints if global debugflag is true
 """
-function printdebug(string,var="")
+function printdebug(string)
     if debugflag == true
-        println(string," : ",var)
+        println("$string")
     end
 end
 
@@ -17,7 +17,25 @@ function colorvalue_threshold(var,threshold)
     if var < threshold
         return :green
     else
-        return :red
+        #return :red
+        if var/threshold > 10000
+            return :red
+        elseif 1000 < var/threshold < 10000
+            return :light_magenta
+        else
+            return :light_cyan
+        end
+    end
+end
+
+"""
+colorvalue_bool: Return yellow color symbol depending on if boolean is true or false
+"""
+function colorvalue_bool(var)
+    if var == true
+        return :yellow
+    else
+        return :default
     end
 end
 
@@ -49,9 +67,14 @@ end
 """
 print_calculation_setup: Print calculation setup
 """
-function print_calculation_setup(HFtype,basisset,dim,guess,tei_type,fock_algorithm,lowest_S_eigenval)
-    labels=["HF type", "Basis set","No. basis functions","Guess", "2-electron type","Fock algorithm","S lowest eigenvalue"]
-    stuff=[HFtype,basisset,string(dim),guess,tei_type,fock_algorithm,lowest_S_eigenval]
+function print_calculation_settings(HFtype,basisset,dim,guess,tei_type,fock_algorithm,lowest_S_eigenval,
+        levelshift,levelshift_val,lshift_thresh,damping,damping_val,damping_thresh,diis,diis_size,diis_thresh)
+    labels=["HF type", "Basis set","No. basis functions","Guess", "2-electron type","Fock algorithm","S lowest eigenvalue", 
+    "Levelshift", "Levelshift parameter", "Lshift-turnoff thresh.","Damping","Damping parameter", "Damp-turnoff thresh.",
+    "DIIS","DIIS vec size","DIIS thresh."]
+    stuff=[HFtype,basisset,string(dim),guess,tei_type,fock_algorithm,lowest_S_eigenval,
+        string(levelshift),levelshift_val,lshift_thresh,
+        string(damping),damping_val,damping_thresh,string(diis),string(diis_size),diis_thresh]
     data=hcat(labels,stuff)
     print(Crayon(foreground = :green, bold = true), "CALCULATION SETTINGS\n",Crayon(reset=true))
     pretty_table(data; crop=:none,  noheader = true,
@@ -74,7 +97,8 @@ iteration_printing: Printing during SCF iterations.
 printlevel=1 => minimal printing
 printlevel >1 => more elaborate printing with SCF-iteration header
 """
-function iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,rmsDP_threshold,P_MaxE,maxDP_threshold,levelshiftflag)
+function iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,
+    rmsDP_threshold,P_MaxE,maxDP_threshold,levelshiftflag,damping_flag,diis_flag)
     if printlevel > 1
         #Fair amount of printing
         println("Current energy: $energy")
@@ -88,13 +112,15 @@ function iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,
         #Minimal printing
         #@printf("%6d %17.10f %17.10f %17.10f %17.10f %10s %10s\n", iter, energy, deltaE,P_RMS,P_MaxE,levelshiftflag, "no")
         #Note: Crayon output might add ~1-1.5 sec in total per 70 iterations
-        @printf("%6d %17.10f ", iter, energy)
-        @printf("%s%17.10f%s ",Crayon(foreground = colorvalue_threshold(abs(deltaE),energythreshold)),deltaE,Crayon(reset=true))
-        @printf("%s%17.10f%s ",Crayon(foreground = colorvalue_threshold(abs(P_RMS),rmsDP_threshold)),P_RMS,Crayon(reset=true))
-        @printf("%s%17.10f%s ",Crayon(foreground = colorvalue_threshold(abs(P_MaxE),maxDP_threshold)),P_MaxE,Crayon(reset=true))
-        @printf("%10s %10s\n",levelshiftflag, "no")
+        @printf("%4d%15.9f", iter, energy)
+        @printf("%s%16.9f%s",Crayon(foreground = colorvalue_threshold(abs(deltaE),energythreshold)),deltaE,Crayon(reset=true))
+        @printf("%s%14.9f%s",Crayon(foreground = colorvalue_threshold(abs(P_RMS),rmsDP_threshold)),P_RMS,Crayon(reset=true))
+        @printf("%s%14.9f%s",Crayon(foreground = colorvalue_threshold(abs(P_MaxE),maxDP_threshold)),P_MaxE,Crayon(reset=true))
+        @printf("%s%8s%s",Crayon(foreground = colorvalue_bool(levelshiftflag)),levelshiftflag,Crayon(reset=true))
+        @printf("%s%8s%s",Crayon(foreground = colorvalue_bool(damping_flag)) ,damping_flag,Crayon(reset=true))
+        @printf("%s%8s%s",Crayon(foreground = colorvalue_bool(diis_flag)),diis_flag,Crayon(reset=true))
+        @printf("\n")
     end
-
 end
 
 """

@@ -37,17 +37,46 @@ H 0.0 0.0 0.74
 #He 0.0 0.0 0.0
 #""", charge=0, mult=1)
 #H2O fragment
-H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
+#H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
 O3_triplet = create_fragment(xyzfile="o3.xyz", charge=0, mult=3)
 #Acetic acid fragment
-#@time Acetic = create_fragment(xyzfile="acetic.xyz", charge=0, mult=1)
+@time Acetic = create_fragment(xyzfile="acetic.xyz", charge=0, mult=1)
 
 #Call jHF on fragment with input basis
-basisname="def2-tzvpp"
+basisname="sto-3g"
 
+# @time resultA= jHF(O3_triplet, basisname; maxiter=200, fock_algorithm="turbo", HFtype="UHF",
+#     levelshift=false, levelshift_val=0.25, damping=false,tei_type="4c", printlevel=1)
+# @time resultX= jHF(O3_triplet, basisname; maxiter=200, fock_algorithm="turbo", HFtype="UHF",
+#     levelshift=true, levelshift_val=0.5, damping=false,tei_type="4c", printlevel=1)
+#     @time resultY= jHF(O3_triplet, basisname; maxiter=200, fock_algorithm="turbo", HFtype="UHF",
+#     levelshift=false, damping=true,tei_type="4c", printlevel=1)
+#     println("None : ", resultA["finaliter"])
+#     println("Levelshift : ", resultX["finaliter"])
+#     println("Damping : ", resultY["finaliter"])
+# exit()
 #@time energy= jHF(H2O, basisname; maxiter=120, fock_algorithm="loop")#, levelshift=20.0, lshift_thresh=1e-4
-@time energy= jHF(H2O, basisname; maxiter=500, fock_algorithm="turbo", HFtype="RHF", levelshift=2.0, lshift_thresh=1e-4,
-    tei_type="4c", print_final_matrices=true, debugprint=false, printlevel=1)
+@time resultRHF= jHF(Acetic, basisname; maxiter=200, fock_algorithm="turbo", HFtype="UHF",
+    levelshift=false, damping=false,tei_type="4c", printlevel=1)
+@time result_l_F_d_F= jHF(Acetic, basisname; maxiter=200, fock_algorithm="turbo", HFtype="UHF",
+    levelshift=false, damping=false,tei_type="4c", printlevel=1)
+@time result_l= jHF(Acetic, basisname; maxiter=200, fock_algorithm="turbo", HFtype="UHF",
+levelshift=true, levelshift_val=0.5, lshift_thresh=0.01, damping=false, tei_type="4c", printlevel=1)
+@time result_d= jHF(Acetic, basisname; maxiter=200, fock_algorithm="turbo", HFtype="UHF",
+levelshift=false, damping=true, damping_val=0.4, damping_thresh=0.01,tei_type="4c", printlevel=1)
+@time result_lf_true= jHF(Acetic, basisname; maxiter=200, fock_algorithm="turbo", HFtype="UHF",
+levelshift=true, damping=true, levelshift_val=0.5, lshift_thresh=0.01, damping_val=0.4, damping_thresh=0.01,tei_type="4c", printlevel=1)
+println("Nothing (RHF): ", resultRHF["finaliter"])
+println("Nothing : ", result_l_F_d_F["finaliter"])
+println("Levelshift : ", result_l["finaliter"])
+println("Damping : ", result_d["finaliter"])
+println("Damp+Levelshift : ", result_lf_true["finaliter"])
+println("---------------------------")
+println("Nothing (RHF) : ", resultRHF["energy"])
+println("Nothing : ", result_l_F_d_F["energy"])
+println("Levelshift : ", result_l["energy"])
+println("Damping : ", result_d["energy"])
+println("Damp+Levelshift : ", result_lf_true["energy"])
 #@time energy= jHF(H2O, basisname; debugprint=false, maxiter=120, fock_algorithm="tullio")
 #@time energy= jHF(H2O, basisname; debugprint=false, maxiter=120, fock_algorithm="tensor")
 

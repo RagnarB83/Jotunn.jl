@@ -195,8 +195,9 @@ function array_to_string(elems,coords)
     for i in 1:length(elems)
         el = elems[i]
         c_row = coords[i,:]
-        c_line=string.(c_row)
-        coords_string = coords_string * el * " " * join(c_line, " ") * "\n"
+        c1=@sprintf "%.14f" c_row[1];c2=@sprintf "%.14f" c_row[2];c3=@sprintf "%.14f" c_row[3]
+        c_line=c1*" "*c2*" "*c3
+        coords_string = coords_string * el * " " * c_line * "\n"
     end
     return coords_string
 end

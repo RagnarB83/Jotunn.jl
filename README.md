@@ -11,7 +11,7 @@ Might one day turn into something useful.
 - Fock matrix speedup via [LoopVectorization.jl](https://github.com/JuliaSIMD/LoopVectorization.jl)
 - Mulliken population analysis (RHF and UHF)
 - Mayer bond orders (RHF and UHF)
-- SCF convergence aids: levelshifting
+- SCF convergence aids: levelshifting, static damping
 - Basis sets:
     - Support for all internal basis sets in [GaussianBasis.jl](https://github.com/FermiQC/GaussianBasis.jl).
     - Support for reading in external basis set in ORCA format.
@@ -22,7 +22,7 @@ Might one day turn into something useful.
     - Density fitting
 - Improving SCF convergence:
     - DIIS
-    - Damping 
+    - Dynamic damping 
     - Better guess than Hcore
 - DFT support:
     - interface to LibXC
@@ -33,10 +33,7 @@ Might one day turn into something useful.
 - Hirshfeld population analysis
 - Direct SCF algorithm ?
 - Noncollinear HF/DFT
-
-## Development: bugs to be fixed
-- Fix bug: GaussianBasis.jl sensitive to scientific notation in coordinates
-- Read-in basis set: Normalize contraction coefficients
+- Read-in basis set: Normalize contraction coefficients. Code currently assumes normalization.
 
 ## Dependencies (not in Julia standard library)
 - [GaussianBasis.jl](https://github.com/FermiQC/GaussianBasis.jl) (1 and 2-electron integrals)
@@ -125,8 +122,9 @@ H 0.0 0.0 0.74
 """, charge=0, mult=1)
 
 #Simple call
-energy= jHF(H2, "sto-3g")
-println("Energy from Jotunn: $energy Eh")
+result= jHF(H2, "sto-3g")
+println("Result dictionary from Jotunn: $result")
+println("Energy: $(result["energy"]) Eh")
  ```
 **moreoptions-input.jl:**
  ```julia
@@ -134,7 +132,7 @@ using Jotunn
 H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
 
 #More keywords
-energy= jHF(H2O, "sto-3g"; maxiter=200, fock_algorithm="turbo", printlevel=2,
+result= jHF(H2O, "sto-3g"; maxiter=200, fock_algorithm="turbo", printlevel=2,
     HFtype="RHF", levelshift=2.0, lshift_thresh=1e-4, tei_type="4c", 
     print_final_matrices=true, debugprint=true)
  ```
@@ -144,12 +142,12 @@ energy= jHF(H2O, "sto-3g"; maxiter=200, fock_algorithm="turbo", printlevel=2,
 using Jotunn
 H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
 #All features
-energy = jHF(H2O, "sto-3g"; HFtype="UHF", guess="hcore", 
-    basisfile="none", maxiter=200, printlevel=1,
-    print_final_matrices=false, debugprint=false, 
-    rmsDP_threshold=5e-9, maxDP_threshold=1e-7, energythreshold=1e-8, 
-    tei_type="4c", fock_algorithm="turbo", 
-    levelshift=1.0, lshift_thresh=0.001)
+result = jHF(H2O, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile="none", maxiter=120, 
+    print_final_matrices=false, rmsDP_threshold=5e-9, maxDP_threshold=1e-7, tei_type="4c",
+    energythreshold=1e-8, debugprint=false, fock_algorithm="turbo", 
+    levelshift=false, levelshift_val=0.10, lshift_thresh=0.01,
+    damping=true, damping_val=0.4, damping_thresh=0.01,
+    printlevel=1)
  ```
 
 #
