@@ -5,8 +5,21 @@ FEATURES
 - DIIS: https://www.chem.fsu.edu/~deprince/programming_projects/diis/
 http://vergil.chemistry.gatech.edu/notes/diis/node1.html
 - Damping thresholds. Change from P. Wait until DIIS is ready
-- Write tests for package
-- Add dashed line below occupied orbitals in MO energy output
+- Write/read functionality for a wavefunction file. Use for guess="read" in jHF
+  and also for standalone plot_MO/plot_density functions.
+  Options:
+  - Löwdin pop
+  - DelimitedFiles ?
+  - JLD2: https://github.com/JuliaIO/JLD2.jl  (JLD : https://github.com/JuliaIO/JLD.jl,  maintanenance mode)
+  - BSON: https://github.com/JuliaIO/BSON.jl (binary JSON)
+  - JSON3: https://github.com/quinnj/JSON3.jl  (text)
+
+  https://discourse.julialang.org/t/how-to-save-and-read-a-structure/71031/20
+
+- Option to write Cube file for MOs and densities.
+- Prescreening: libcint should already do standard integral prescreening (Schwarz or similar).
+   Todo: add density-matrix*integral product prescreening ?
+- Add dashed line below occupied orbitals in MO energy output or label HOMO
 - Finish F,P,C matrix writing for UHF per iteration and cleanup in general
 - Implement Fock using sparse version of 2ERI from GaussianBasis.jl
 - Better guess than Hcore. PModel or Patom? Whatever is easier
@@ -14,7 +27,6 @@ http://vergil.chemistry.gatech.edu/notes/diis/node1.html
 - Dipole moment
 - Add colors as optional in output
 - electric field gradient
-- Cube files for MOs and densities
 - LibXC interface: https://github.com/JuliaMolSim/Libxc.jl
 - DFT grids. Interface to library? 
     - https://github.com/dftlibs/numgrid
@@ -23,3 +35,10 @@ http://vergil.chemistry.gatech.edu/notes/diis/node1.html
 - Gradient?
 - TDDFT?
 - Test Libint library also via Lints: https://github.com/FermiQC/Lints.jl
+- GPU options:
+    - https://nextjournal.com/sdanisch/julia-gpu-programming
+    - https://pretalx.com/juliacon2021/talk/VK87Q3/
+    - https://pretalx.com/juliacon2021/talk/VK87Q3/
+    - https://github.com/JuliaGPU/ArrayFire.jl
+    - https://github.com/JuliaGPU/GPUArrays.jl
+    - NVIDIA: https://github.com/JuliaGPU/CUDA.jl

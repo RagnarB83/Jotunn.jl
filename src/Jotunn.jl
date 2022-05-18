@@ -12,7 +12,7 @@ using PrettyTables
 using Crayons
 
 #Linear Algebra speed-up packages
-using LoopVectorization
+#using LoopVectorization
 #using TensorOperations
 #using Tullio
 

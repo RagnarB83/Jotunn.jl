@@ -7,8 +7,8 @@ Might one day turn into something useful.
 
 ## Current features
 - 1 and 2-electron integrals via [GaussianBasis.jl](https://github.com/FermiQC/GaussianBasis.jl) and [libcint](https://github.com/sunqm/libcint).
-- Conventional RHF and UHF algorithm with full rank-4 tensor.
-- Fock matrix speedup via [LoopVectorization.jl](https://github.com/JuliaSIMD/LoopVectorization.jl)
+- Conventional RHF and UHF algorithm using 2-el integrals as full rank-4 tensor (4c) or sparse version (sparse4c)
+- Fock matrix speedup (4c) via [LoopVectorization.jl](https://github.com/JuliaSIMD/LoopVectorization.jl)
 - Mulliken population analysis (RHF and UHF)
 - Mayer bond orders (RHF and UHF)
 - SCF convergence aids: levelshifting, static damping
@@ -18,7 +18,7 @@ Might one day turn into something useful.
 
 ## Development: features to be added
 - Improving speed: 
-    - Support sparse 2-electron integrals
+    - Further fine-tuning of Fock code for sparse 2el-integral version.
     - Density fitting
 - Improving SCF convergence:
     - DIIS
@@ -50,9 +50,7 @@ Might one day turn into something useful.
 
 *Option 1. Manual setup:*
 
-First clone or download the Jotunn source-code. 
-
-Make package available to Julia by setting the environment variable:
+First clone or download the Jotunn source-code. Make package available to Julia by setting the environment variable:
 ```sh
 export JULIA_LOAD_PATH=/path/to/Jotunn/src:$JULIA_LOAD_PATH  
 #copy-paste in Unix shell to make Jotunn package available to Julia
@@ -60,16 +58,35 @@ export JULIA_LOAD_PATH=/path/to/Jotunn/src:$JULIA_LOAD_PATH
 
 *Option 2. Install package:*
 
-Launch a Julia session and copy-paste into Julia REPL. This will install Jotunn as a Julia package.:
+Launch a Julia session and copy-paste the line below into Julia REPL. This will install Jotunn as a Julia package:
 ```julia
 using Pkg; Pkg.add(url="https://github.com/RagnarB83/Jotunn.jl")
 ```
 
 #
-### How to use:
+### Basic functionality:
 
-The primary Jotunn functions to use are **create_fragment** (a Jotunn molecule fragment object) and 
-**jHF** (the Jotunn RHF/UHF code).
+
+
+ **create_fragment** (a function to create a Jotunn molecule fragment object)
+```julia
+function create_fragment(;coords_string=nothing,xyzfile=nothing,pdbfile=nothing,fragfile=nothing, coords=nothing,
+    elems=nothing, calc_connectivity=false, label=nothing, charge=nothing, mult=nothing)
+```
+
+**jHF** (a function to run the Jotunn RHF/UHF code).
+
+```julia
+function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="hcore", basisfile::String="none", maxiter::Int64=120, 
+    print_final_matrices::Bool=false, rmsDP_threshold::Float64=5e-9, maxDP_threshold::Float64=1e-7, tei_type::String="sparse4c",
+    energythreshold::Float64=1e-8, debugprint::Bool=false, fock_algorithm::String="loop", 
+    levelshift::Bool=false, levelshift_val::Float64=0.10, lshift_thresh::Float64=0.01,
+    damping::Bool=true, damping_val::Float64=0.4, damping_thresh::Float64=0.01,
+    diis::Bool=false, diis_size::Int64=7, diis_thresh::Float64=0.01,
+    printlevel::Int64=1)
+```
+
+### How to use:
 
 *Option 1: 
 Launch an interactive julia session:*
@@ -108,7 +125,7 @@ julia test.jl
 ### Example inputfiles:
 *Example inputfiles below can all be found in examples directory*
 
-See  See [GaussianBasis/lib directory](https://github.com/FermiQC/GaussianBasis.jl/tree/main/lib) for list of available basis-sets.
+See [GaussianBasis/lib directory](https://github.com/FermiQC/GaussianBasis.jl/tree/main/lib) for list of available basis-sets.
 
 **simple-input.jl:**
 ```julia
@@ -177,93 +194,76 @@ Creating basis set object
 
 Calculating 1-electron integrals
 Calculating 2-electron integrals
-  1.763071 seconds (3.59 M allocations: 169.882 MiB, 3.40% gc time, 99.00% compilation time)
+  2.461401 seconds (3.59 M allocations: 169.377 MiB, 3.08% gc time, 98.97% compilation time)
 Choosing Fock algorithm.
 Small system (Basis dim: 24). Choosing loop Fock.
 Providing guess for density matrix
+Energy of guess: 9.119379905339786 Eh
 
 CALCULATION SETTINGS
-====================== =================
-              HF type              RHF  
-            Basis set         def2-svp  
-  No. basis functions               24  
-                Guess            hcore  
-      2-electron type               4c  
-       Fock algorithm             loop  
-  S lowest eigenvalue           0.0281  
-====================== =================
+========================= =================
+                 HF type              RHF  
+               Basis set         def2-svp  
+     No. basis functions               24  
+                   Guess            hcore  
+         2-electron type               4c  
+          Fock algorithm             loop  
+     S lowest eigenvalue           0.0281  
+              Levelshift            false  
+    Levelshift parameter           0.1000  
+  Lshift-turnoff thresh.           0.0100  
+                 Damping             true  
+       Damping parameter           0.4000  
+    Damp-turnoff thresh.           0.0100  
+                    DIIS            false  
+           DIIS vec size                7  
+            DIIS thresh.           0.0100  
+========================= =================
 
 Beginning SCF iterations
-  Iter            Energy            deltaE            RMS-DP            Max-DP Levelshift    Damping
-     1   -121.4976082145   -121.4976082145      0.3526149661      0.8363810730       true         no
-     2    -67.0737370632     54.4238711514      0.2083579545      2.6274265828       true         no
-     3    -74.8306068274     -7.7568697642      0.1104459981      1.2059710798       true         no
-     4    -73.3621212492      1.4684855782      0.0145349590      0.1216172035       true         no
-     5    -73.4905861685     -0.1284649193      0.0086857292      0.0960667848       true         no
-     6    -73.4651054446      0.0254807239      0.0032598910      0.0345616540       true         no
-     7    -73.4627145916      0.0023908530      0.0014452233      0.0154176001       true         no
-     8    -73.4607371246      0.0019774670      0.0006174810      0.0065503619       true         no
-     9    -73.4599903466      0.0007467780      0.0002679091      0.0028412302       true         no
-    10    -73.4596529564      0.0003373902      0.0001159732      0.0012289148       true         no
-    11    -73.4595082945      0.0001446619      0.0000502891      0.0005327990       true         no
-    12    -72.1655274220      1.2939808725      0.2960680447      3.2213815245      false         no
-    13    -78.6056576801     -6.4401302581      0.0970784541      0.5127348840      false         no
-    14    -74.3290472853      4.2766103948      0.0518358027      0.6226871994      false         no
-    15    -76.9591341296     -2.6300868443      0.0312625824      0.2042331625      false         no
-    16    -75.3778166693      1.5813174603      0.0168315378      0.2065614086      false         no
-    17    -76.3068587055     -0.9290420362      0.0101305710      0.0551039713      false         no
-    18    -75.7595158677      0.5473428378      0.0056294333      0.0689660519      false         no
-    19    -76.0788083030     -0.3192924353      0.0033640695      0.0185103155      false         no
-    20    -75.8916698982      0.1871384048      0.0019082419      0.0231525213      false         no
-    21    -76.0008069394     -0.1091370411      0.0011325964      0.0063937221      false         no
-    22    -75.9369524458      0.0638544936      0.0006501422      0.0078102436      false         no
-    23    -75.9742092353     -0.0372567895      0.0003838726      0.0021914433      false         no
-    24    -75.9524269979      0.0217822374      0.0002218711      0.0026444978      false         no
-    25    -75.9651410903     -0.0127140924      0.0001305227      0.0007492345      false         no
-    26    -75.9577105969      0.0074304934      0.0000757456      0.0008977448      false         no
-    27    -75.9620488171     -0.0043382202      0.0000444492      0.0002559043      false         no
-    28    -75.9595139815      0.0025348356      0.0000258581      0.0003052966      false         no
-    29    -75.9609941594     -0.0014801779      0.0000151492      0.0000873643      false         no
-    30    -75.9601294002      0.0008647593      0.0000088262      0.0001039416      false         no
-    31    -75.9606344143     -0.0005050141      0.0000051654      0.0000298180      false         no
-    32    -75.9603393956      0.0002950186      0.0000030122      0.0000354144      false         no
-    33    -75.9605116958     -0.0001723001      0.0000017616      0.0000101756      false         no
-    34    -75.9604110468      0.0001006490      0.0000010279      0.0000120720      false         no
-    35    -75.9604698313     -0.0000587846      0.0000006009      0.0000034721      false         no
-    36    -75.9604354935      0.0000343378      0.0000003507      0.0000041164      false         no
-    37    -75.9604555492     -0.0000200557      0.0000002050      0.0000011847      false         no
-    38    -75.9604438343      0.0000117149      0.0000001197      0.0000014039      false         no
-    39    -75.9604506768     -0.0000068424      0.0000000699      0.0000004042      false         no
-    40    -75.9604466800      0.0000039967      0.0000000408      0.0000004789      false         no
-    41    -75.9604490145     -0.0000023344      0.0000000239      0.0000001379      false         no
-    42    -75.9604476509      0.0000013636      0.0000000139      0.0000001633      false         no
-    43    -75.9604484473     -0.0000007964      0.0000000081      0.0000000471      false         no
-    44    -75.9604479821      0.0000004652      0.0000000048      0.0000000557      false         no
-    45    -75.9604482539     -0.0000002717      0.0000000028      0.0000000161      false         no
-    46    -75.9604480951      0.0000001587      0.0000000016      0.0000000190      false         no
-    47    -75.9604481878     -0.0000000927      0.0000000009      0.0000000055      false         no
-    48    -75.9604481337      0.0000000541      0.0000000006      0.0000000065      false         no
-    49    -75.9604481653     -0.0000000316      0.0000000003      0.0000000019      false         no
-    50    -75.9604481469      0.0000000185      0.0000000002      0.0000000022      false         no
-    51    -75.9604481576     -0.0000000108      0.0000000001      0.0000000006      false         no
-    52    -75.9604481513      0.0000000063      0.0000000001      0.0000000008      false         no
+Iter         Energy          deltaE        RMS-DP        Max-DP  Lshift    Damp    DIIS
+   1 -126.165023244  -126.165023244   0.422360951   0.766341001   false    true   false
+   2  -90.891462805    35.273560439   0.144192193   0.976274234   false    true   false
+   3  -77.074577330    13.816885475   0.177725075   1.918743295   false    true   false
+   4  -76.127629367     0.946947963   0.073956975   0.835446553   false    true   false
+   5  -76.010001447     0.117627920   0.029057353   0.340558595   false    true   false
+   6  -75.972851329     0.037150118   0.011633177   0.141278309   false    true   false
+   7  -75.962058521     0.010792808   0.004814077   0.060224092   false    true   false
+   8  -75.957733508     0.004325013   0.000795942   0.004387088   false   false   false
+   9  -75.959936967    -0.002203459   0.000275068   0.002149001   false   false   false
+  10  -75.960270463    -0.000333496   0.000103929   0.000945157   false   false   false
+  11  -75.960395859    -0.000125396   0.000040334   0.000397913   false   false   false
+  12  -75.960425046    -0.000029186   0.000015887   0.000166315   false   false   false
+  13  -75.960441935    -0.000016889   0.000006333   0.000067903   false   false   false
+  14  -75.960444414    -0.000002479   0.000002553   0.000028294   false   false   false
+  15  -75.960447558    -0.000003143   0.000001038   0.000011428   false   false   false
+  16  -75.960447455     0.000000103   0.000000427   0.000004844   false   false   false
+  17  -75.960448170    -0.000000715   0.000000177   0.000001934   false   false   false
+  18  -75.960447999     0.000000171   0.000000075   0.000000849   false   false   false
+  19  -75.960448191    -0.000000192   0.000000032   0.000000330   false   false   false
+  20  -75.960448113     0.000000078   0.000000014   0.000000154   false   false   false
+  21  -75.960448171    -0.000000058   0.000000006   0.000000057   false   false   false
+  22  -75.960448141     0.000000030   0.000000003   0.000000029   false   false   false
+  23  -75.960448160    -0.000000019   0.000000001   0.000000010   false   false   false
+  24  -75.960448150     0.000000010   0.000000001   0.000000006   false   false   false
+  25  -75.960448156    -0.000000006   0.000000000   0.000000002   false   false   false
 
-                              SCF converged in 52 iterations! Hell yeah! 🎉
+                              SCF converged in 25 iterations! Hell yeah! 🎉
 
 ┌──────────────────────┬────────────────┐
 │ Energy contributions │          E(Eh) │
 ├──────────────────────┼────────────────┤
-│         Total energy │   -75.96044815 │
+│         Total energy │   -75.96044816 │
 │    Nuclear repulsion │     9.11937991 │
 │    Electronic energy │   -85.07982806 │
-│    1-electron energy │  -122.90608314 │
-│    2-electron energy │    37.82625509 │
+│    1-electron energy │  -122.90608315 │
+│    2-electron energy │    37.82625508 │
 │       Kinetic energy │    75.74591703 │
-│     Potential energy │  -151.70636518 │
+│     Potential energy │  -151.70636519 │
 ├──────────────────────┼────────────────┤
 │         Virial ratio │     2.00283225 │
 └──────────────────────┴────────────────┘
-  1.078943 seconds (1.77 M allocations: 95.802 MiB, 2.10% gc time, 90.81% compilation time)
+  1.332684 seconds (1.72 M allocations: 90.361 MiB, 2.09% gc time, 94.01% compilation time)
 
 
 MO Energies (closed-shell)
@@ -319,12 +319,12 @@ Threshold: 0.01
 
 FINAL RESULTS
 ====================== =================
-      Final HF energy     -75.96044815  
+      Final HF energy     -75.96044816  
      Molecule formula              OHH  
   Number of electrons               10  
             Basis set         def2-svp  
               HF type              RHF  
        Fock algorithm             loop  
-       SCF iterations               52  
+       SCF iterations               25  
 ====================== =================
   ```

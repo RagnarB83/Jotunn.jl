@@ -74,3 +74,54 @@ function check_multiplicity(num_el,charge,mult)
         exit()
     end
 end
+
+
+#plot_MO and plot_density. Plots from arrays themselves.
+#Write wrapper tools that are standalone from basisfile or add basifile option below
+
+"""
+Plot MO with index MOindex
+"""
+function plot_MO(MOindex,bset,C)
+
+    #Read basis functions from bset and coordinates
+
+    #MO coefficents from C
+
+    #x_range=range(-5,5, step=0.1)
+    #x_range=range(-5,5, length=100)
+
+end
+
+"""
+Plot density
+"""
+function plot_density(P,bset,C; box_size=[-5,5], grid_size=100)
+
+    isovalue=0.05
+    #Ranges for x,y and z
+    x_min = y_min =z_min = box_size[1]
+    x_max =y_max = z_max = box_size[2]
+
+    x_space=range(x_min,x_max, length=grid_size)
+    y_space=range(y_min,y_max, length=grid_size)
+    z_space=range(z_min,z_max, length=grid_size)
+    dim=bset.nbas
+
+    #rho=zeros(min_lim)
+
+    #bset.basis. Basis functions ordered onto atoms in atom-ordering
+    #Length .basis is numatoms. Vector{Vector{BasisFunction}}
+
+    for x in range(x_lim_min,x_lim_max)
+        for µ in 1:dim
+            for ν in 1:dim
+                ϕ_µ=bset[µ]
+                ϕ_ν=bset[ν]
+                rho[x] = P[µ,ν] * ϕ_µ * ϕ_ν
+            end
+        end
+    end
+
+
+end

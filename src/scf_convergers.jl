@@ -13,13 +13,43 @@ end
 """
 diis_control: Do DIIS extrapolation or not
 """
-function diis_control(F′,diis_error_matrices,Fockmatrices,diis,diis_size,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=diis_thresh)
+function diis_control(F′,F,diis_error_matrices,Fockmatrices,diis,diis_size,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=diis_thresh)
 
     if diis == true
         println("DIIS true")
-        #Do extrapolation based on F′ and diismatrix
-        newF′=F′
-        return newF′
+        #Calculate new DIIS error vector based on current F and P
+        diis_err = diis_error_vector(F,P,S,S_minhalf)
+
+        #Add error vector to array and F to 
+        push!(diis_error_matrices,diis_err)
+        push!(Fockmatrices,F)
+
+        if length(diis_error_matrices) > 1
+            println("length(diis_error_matrices) :", length(diis_error_matrices))
+
+            #B = zeros()
+            #for i in length(diis_error_matrices)
+            #    B
+            #end
+
+            #Determine ci coefficeints
+
+            #SVD
+            U,Sval, Vt = svd(a)
+
+            #Do extrapolation based on F′ and ci coefficients
+            newF=zeros(size(F′))
+            for i in 1:size(ci_s)
+                newF += ci_s[i]*Fockmatrices[i]
+            end
+            newF′=F′
+            return newF′
+        else
+            #Note enough matrices to do extrapolation.
+            #Returning unchanged matrix
+            println("Not enough matrices ($(length(diis_error_matrices))) to do DIIS extrapolation")
+            return F′
+        end
     else
         #No DIIS: unchanged F′
         #println("No DIIS")
@@ -103,4 +133,19 @@ Currently static
 """
 function damping_P(Pnew,Pold;mixpar=0.4)
     Pnew_damped=(1-mixpar)Pnew+mixpar*Pold
+end
+
+"""
+[F,P] commutator
+"""
+function FP_commutator(F,P,S)
+    commut = F*P*S-S*P*F
+    return commut
+end
+
+"DIIS error vector"
+function diis_error_vector(F,P,S,Sminhalf)
+    commut= FP_commutator(F,P,S)
+    error_vec = transpose(Sminhalf)*commut*Sminhalf
+    return error_vec
 end

@@ -3,8 +3,8 @@ export jHF
 Jotunn: jHF: a RHF/UHF program
 """
 function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="hcore", basisfile::String="none", maxiter::Int64=120, 
-    print_final_matrices::Bool=false, rmsDP_threshold::Float64=5e-9, maxDP_threshold::Float64=1e-7, tei_type::String="4c",
-    energythreshold::Float64=1e-8, debugprint::Bool=false, fock_algorithm::String="turbo", 
+    print_final_matrices::Bool=false, rmsDP_threshold::Float64=5e-9, maxDP_threshold::Float64=1e-7, tei_type::String="sparse4c",
+    energythreshold::Float64=1e-8, debugprint::Bool=false, fock_algorithm::String="loop", 
     levelshift::Bool=false, levelshift_val::Float64=0.10, lshift_thresh::Float64=0.01,
     damping::Bool=true, damping_val::Float64=0.4, damping_thresh::Float64=0.01,
     diis::Bool=false, diis_size::Int64=7, diis_thresh::Float64=0.01,
@@ -31,13 +31,12 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
 
     #Check whether chosen multiplicity makes sense before continuing
     check_multiplicity(num_el,fragment.charge,fragment.mult)
-
+    if fragment.mult != 1
+        println("RHF and multiplicity > 1 is not possible. Switching to UHF")
+        HFtype="UHF"
+    end
     #RHF vs. UHF
     if HFtype == "RHF"
-        if fragment.mult != 1
-            println("RHF and multiplicity > 1 is not possible. Exiting!")
-            exit()
-        end
         #Num occ orbitals in RHF
         numoccorbs=Int64(num_el/2)
         unpaired_electrons=0
@@ -80,7 +79,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     Stemp = SVAL_minhalf*transpose(Svec)
     S_minhalf = Svec * Stemp
 
-    println("Calculating 2-electron integrals")
+    println("Calculating 2-electron integrals (tei_type: $tei_type)")
     #Calculating two-electron integrals: tei_type: 4c, sparse4c
     @time tei = tei_calc(bset,tei_type)
 
@@ -99,6 +98,8 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
         #Setting P to 0. Means that Fock matrix becomes F = Hcore + 0. See Fock functions.
         if HFtype=="RHF"
             P = zeros(dim,dim)
+            guess_energy= E_ZZ + 0.5 * tr((Hcore+Hcore)*P) #Calculate guess energy
+            println("Energy of guess: $guess_energy Eh\n")
         else
             P_⍺ = zeros(dim,dim)
             P_β = zeros(dim,dim)
@@ -107,8 +108,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
         println("unknown guess")
         exit()
     end
-    guess_energy= E_ZZ + 0.5 * tr((Hcore+Hcore)*P) #Calculate guess energy
-    println("Energy of guess: $guess_energy Eh\n")
+    
     print_calculation_settings(HFtype,basisset,dim,guess,tei_type,
         fock_algorithm,lowest_S_eigenval,levelshift,levelshift_val,lshift_thresh,
         damping,damping_val,damping_thresh,diis,diis_size,diis_thresh)
@@ -140,19 +140,18 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
         if HFtype == "RHF"
             #Possible damping of P before making Fock
             P = damping_control(P,P_old,damping,damping_val,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=damping_thresh)
-            F = Fock(Hcore,P,dim,tei) #Make Fock-matrix
+            @time F = Fock(Hcore,P,dim,tei) #Make Fock-matrix
             #if iter == 2
             #    println("iter: $iter")
             #    println("F: $F")
             #    exit()
             #end
-            
             #Possible levelshifting of Fock before diagonalization
             F = levelshift_control(F,levelshift,levelshift_val,numoccorbs,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
             F′ = transpose(S_minhalf)*F*S_minhalf #Transform Fock matrix
 
             # Possible DIIS extrapolation of F′ matrix before diagonalization
-            F′ = diis_control(F′,diis_error_matrices,Fockmatrices,diis,diis_size,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=diis_thresh)
+            F′ = diis_control(F′,F,diis_error_matrices,Fockmatrices,diis,diis_size,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=diis_thresh)
 
             eps, C′ = eigen(F′) #Diagonalize transformed Fock to get eps and C'
             C = S_minhalf*C′ # Get C from C'
@@ -271,7 +270,10 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     #####################################
     print_final_results(energy,fragment,num_el,basisset,HFtype,fock_algorithm,finaliter)
 
-    #Gathering results into Dict and returning
+    #Gathering results into Dict and returning.
+    #TODO: Add more here. 
+    #Mulliken charges/spinpops, Mayer MBOs, dipole, all energy contributions,
+    #orbital energies, occupation numbers, HFtype, numelectrons
     Resultsdict=Dict("energy"=>energy,"finaliter"=>finaliter)
     return Resultsdict
 end

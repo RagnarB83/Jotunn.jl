@@ -121,31 +121,32 @@ function read_xyzfile(filename)
     numatoms=nothing
     coords=nothing
     for (count,line) in enumerate(eachline(file))
-
         if count == 1
             numatoms=parse(Int64,line)
             coords=zeros(numatoms,3)
         elseif count == 2
             #title-line
         elseif count > 2
-            atomnumber=count-2
-            splitline=split(line)
-            col1=splitline[1]
-            #Check if element-symbol or atomic-numbers
-            if tryparse(Int64,col1) == nothing
-                push!(elems,col1)
-            else
-                el=parse(Int64,col1)
-                elem=elements[el]
-                push!(elems,elem)
-            end
+            if length(line) > 2  #Skipping empty lines
+                atomnumber=count-2
+                splitline=split(line)
+                col1=splitline[1]
+                #Check if element-symbol or atomic-numbers
+                if tryparse(Int64,col1) == nothing
+                    push!(elems,col1)
+                else
+                    el=parse(Int64,col1)
+                    elem=elements[el]
+                    push!(elems,elem)
+                end
 
-            x=parse(Float64,splitline[2])
-            y=parse(Float64,splitline[3])
-            z=parse(Float64,splitline[4])
-            coords[atomnumber,1]=x
-            coords[atomnumber,2]=y
-            coords[atomnumber,3]=z
+                x=parse(Float64,splitline[2])
+                y=parse(Float64,splitline[3])
+                z=parse(Float64,splitline[4])
+                coords[atomnumber,1]=x
+                coords[atomnumber,2]=y
+                coords[atomnumber,3]=z
+            end
         end
     end
     close(file)

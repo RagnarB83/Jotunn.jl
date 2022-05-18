@@ -1,3 +1,15 @@
+import Base.getindex
+
+"""
+Jint: Jotunn integral struct in sparse form
+"""
+struct Jint_sparse
+    #Original unique list of integral indices from GaussianBasis but with 1-indexing
+    unique_indices::Vector{NTuple{4, Int16}}
+    #Integral values
+    values::Vector{Float64}
+    length::Int64
+end
 
 #Calculate 2-electron integrals via GaussianBasis.jl
 """
@@ -5,21 +17,68 @@ tei_calc: Calculate 2-electron integrals in 4 different ways
 """
 function tei_calc(bset,tei_type)
     if tei_type == "4c"
-        #Full 4-rank  tensor
+        #Full 4-rank  tensor (1-based indexing already used here)
+        #TODO: Create Jint object instead ??
         integrals = ERI_2e4c(bset)
     elseif tei_type == "sparse4c"
         #Sparse. returns non-zero elements along with a index tuple
-        integrals = sparseERI_2e4c(bset)
+        @time sparseintegrals = sparseERI_2e4c(bset)
+        println("Sparse integrals done. Now doing ordering")
+        #integrals = lookup_table_sparse_create(sparseintegrals)
+        #@time integrals = ordered_int_table_sparse(sparseintegrals)
+        println("Creating Jint object")
+        @time integrals = Jint_sparse([i .+ 1 for i in sparseintegrals[1]],sparseintegrals[2],length(sparseintegrals[2]))
+
     elseif tei_type == "3c"
         #3c version. Requires auxiliary basis set
+        #TODO: Create Jint object instead ??
         integrals = ERI_2e3c(bset, aux)
     elseif tei_type == "2c"
         #2c version
+        #TODO: Create Jint object instead ??
         integrals = ERI_2e2c(bset)
     end
     return integrals
 end
 
+"""
+Calculate all 2-el index permutations for a given set of indices. Called by Fock.
+"""
+function permutations(a,b,c,d)
+    #a,b,c,d=tup
+    if a > b
+        ab = a*(a+1)/2 + b
+    else
+        ab = b*(b+1)/2 + a
+    end
+    if c > d
+        cd = c*(c+1)/2 + d
+    else
+        cd = d*(d+1)/2 + c
+    end
+    γab = a !== b
+    γcd = c !== d
+    γxy = ab !== cd
+    if γab && γcd && γxy
+        #println("Case1: e.g. a!=b!=c!=d  and 1232 ")
+        return [(a,b,c,d),(b,a,c,d),(a,b,d,c),(c,d,a,b),(c,d,b,a),(b,a,d,c),(d,c,b,a),(d,c,a,b)]
+    elseif γcd && γxy
+        #println("Case2")
+        return [(a,b,c,d),(a,b,d,c),(c,d,a,b),(d,c,b,a)]
+    elseif γab && γxy
+        #println("Case3 (incomplete)")
+        return [(a,b,c,d),(b,a,c,d),(c,d,a,b),(c,d,b,a)]
+    elseif γab && γcd
+        #println("Case4")
+        return [(a,b,c,d),(b,a,c,d),(a,b,d,c),(b,a,d,c)]
+    elseif γxy #a=b; c=d ab != cd
+        #println("Case5: example: 1122")
+        return [(a,b,c,d),(c,d,a,b)]
+    else
+        #println("Case6, else. a=a=a=a. Adding nothing(already there)")
+        return [(a,b,c,d)]
+    end
+end
 
 
 """
