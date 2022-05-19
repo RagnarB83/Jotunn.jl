@@ -1,10 +1,11 @@
-#Basic Fock algorithms based on pre-computed 2-electron integrals as full rank-4 tensor or condensed sparse version
 
-#module Fock
-#export choose_Fock, Fock_loop, Fock_loop_sparse, Fock_UHF_loop, Fock_turbo, Fock_UHF_turbo
+#Fock algorithms based on pre-computed 2-electron integrals as full
+# rank-4 tensor or condensed sparse version
+###################################################################
+
 
 """
-choose_Fock: Choosing Fock algorithm based on HFtype, user-input and system-size
+choose_Fock: Choosing Fock algorithm based on user-chosen HFtype,fock_algorithm variables etc.
 """
 function choose_Fock(HFtype,fock_algorithm,dim,tei_type)
     println("Choosing Fock algorithm.")
@@ -17,22 +18,34 @@ function choose_Fock(HFtype,fock_algorithm,dim,tei_type)
     #end
     if HFtype == "RHF"
         if tei_type == "4c"
+
+            # Change macro 
+            #if fock4c_speedup =="turbo"
+            #    println("fock4c_speedup requires LoopVectorization library")
+            #    var"@speedup" = var"@turbo"
+            #elseif fock4c_speedup =="simd"
+            #    var"@speedup" = var"@simd"
+            #else
+            #    #Have nothing
+            #    var"@speedup" = var"@show"
+            #end
+
             if fock_algorithm == "loop" #fast for small systems
                 println("Using Fock_loop")
-                Fock=Fock_loop
-            elseif fock_algorithm == "turbo" #fastest for larger systems. LoopVectorization
-                println("Using Fock_turbo")
+                Fock=Fock_loop_RHF
+            elseif fock_algorithm == "turbo" #faster for larger systems (but long compilation).
+                println("Using Fock_turbo (requires LoopVectorization to be loaded")
                 Fock=Fock_turbo
             end
         elseif tei_type == "sparse4c"
-            if fock_algorithm == "loop"
+            if fock_algorithm == "loop" #generally recommended
                 println("Using Fock_loop_sparse")
-                Fock=Fock_loop_sparse
+                Fock=Fock_loop_sparse_RHF
                 fock_algorithm="loop_sparse"
-            elseif fock_algorithm == "loop2"
+            elseif fock_algorithm == "loop2" #elegant but slow version
                 #SLOWER (to be removed)
                 println("Using Fock_loop_sparse_perm")
-                Fock=Fock_loop_sparse_perm
+                Fock=Fock_loop_sparse_perm_RHF
                 fock_algorithm="loop_sparse_perm"
             else
                 println("unknown choice")
@@ -41,10 +54,11 @@ function choose_Fock(HFtype,fock_algorithm,dim,tei_type)
         end
     else #UHF
         if tei_type == "4c"
-            if fock_algorithm == "loop" #fast for small systems
-                Fock=Fock_UHF_loop
-            elseif fock_algorithm == "turbo" #fastest for larger systems. LoopVectorization
-                Fock=Fock_UHF_turbo
+            if fock_algorithm == "loop"
+                Fock=Fock_loop_UHF
+            elseif fock_algorithm == "turbo"
+                println("Using Fock_turbo_UHF (requires LoopVectorization to be loaded")
+                Fock=Fock_UHF_turbo_UHF
             end
         elseif tei_type == "sparse4c"
             if fock_algorithm == "loop"
@@ -60,33 +74,15 @@ function choose_Fock(HFtype,fock_algorithm,dim,tei_type)
     return Fock,fock_algorithm
 end
 
-"""
-Fock_loop: Fock-matrix RHF case loop-version
-Benchmark: RHF/def2-QZVPP on H2O with MBA: 
-243.604541  seconds total, 3.481820 seconds per Fock  (1 THREAD)
-"""
-function Fock_loop(Hcore,P,dim,tei)
-    printdebug("This is regular Fock loop")
-    JK = zeros(dim,dim)
-    @simd for µ in 1:dim
-        for ν in 1:dim
-            for λ in 1:dim
-                for σ in 1:dim
-                    @inbounds JK[µ,ν] += P[λ,σ]*(tei[µ,ν,λ,σ]-0.5*tei[µ,λ,ν,σ])
-                    #JK[µ,ν] += P[λ,σ]*tei[µ,ν,λ,σ]
-                    #JK[µ,ν] -= 0.5*P[λ,σ]*tei[µ,λ,ν,σ]
-                end
-            end
-        end
-    end
-    F = Hcore + JK
-    return F
-end
+###################################################################
+# Fock functions that use full sparse form of 2-electron integrals
+# via Jint struct
+###################################################################
 
-
-# Fock_loop_sparse2: Version without creating permutations.
-#Instead we do multiple F matrix-element assignments for each unique set
-function Fock_loop_sparse(Hcore,P,dim,tei)
+"""
+Fock_loop_sparse: Multiple matrix-element update per unique set of indices
+"""
+function Fock_loop_sparse_RHF(Hcore,P,dim,tei::Jint_sparse)
 
     #- STILL NEED TO LOOK INTO CORRECTNESS
     #- Are exchange terms definitely correct ??? Look at Xik things
@@ -184,11 +180,10 @@ function Fock_loop_sparse(Hcore,P,dim,tei)
     return F
 end
 
-function Fock_loop_sparse_UHF(Hcore,Pi,Pj,dim,tei)
-
-    #- STILL NEED TO LOOK INTO CORRECTNESS
-    #- Are exchange terms definitely correct ??? Look at Xik things
-    #- Next combine assignments into simpler ones
+"""
+Fock_loop_sparse_UHF: Multiple matrix-element update per unique set of indices
+"""
+function Fock_loop_sparse_UHF(Hcore,Pi,Pj,dim,tei::Jint_sparse)
     G = zeros(dim,dim)
     #Looping over unique sets of indices and values from sparse2e4c
     for i in eachindex(tei.unique_indices)
@@ -284,24 +279,15 @@ end
         #@inbounds JK[µ,ν] += Pi[λ,σ]*tei[ν,µ,λ,σ]+Pj[λ,σ]*tei[ν,µ,λ,σ]-Pi[λ,σ]*tei[ν,λ,µ,σ]
 
 
-
-
-
-
-
-
-
 """
 Fock_loop_sparse_perm: RHF Sparse-integral loop-version RHF of Fock-matrix with permutations
 Allocates too much
 """
 #Fock_loop(Hcore,P,dim,indices,tei)
-function Fock_loop_sparse_perm(Hcore,P,dim,tei)
+function Fock_loop_sparse_perm_RHF(Hcore,P,dim,tei::Jint_sparse)
     #println("THIS IS Fock_loop_sparse")
     G = zeros(dim,dim)
     #Looping over tuples of indices from sparse2e4c
-    #println("tei.unique_indices: $(length(tei.unique_indices))")
-    #println("tei.length: $(tei.length)")
     for i in eachindex(tei.unique_indices)
         #This is the unique set of indices provided by GaussianBasis/libcint (sparse)
         #uniq_tuple=tei.unique_indices[i]
@@ -323,13 +309,36 @@ function Fock_loop_sparse_perm(Hcore,P,dim,tei)
 end
 
 
-
+###################################################################
+# Fock functions that use full 4-rank tensor
+#TODO: Enable macro that can switch from @simd to @turbo
+###################################################################
+"""
+Fock_loop: Fock-matrix RHF case loop-version
+Benchmark: RHF/def2-QZVPP on H2O with MBA: 
+243.604541  seconds total, 3.481820 seconds per Fock  (1 THREAD)
+"""
+function Fock_loop_RHF(Hcore,P,dim,tei::Array{Float64,4})
+    printdebug("This is regular Fock loop")
+    JK = zeros(dim,dim)
+    @simd for µ in 1:dim
+        for ν in 1:dim
+            for λ in 1:dim
+                for σ in 1:dim
+                    @inbounds JK[µ,ν] += P[λ,σ]*(tei[µ,ν,λ,σ]-0.5*tei[µ,λ,ν,σ])
+                end
+            end
+        end
+    end
+    F = Hcore + JK
+    return F
+end
 
 
 """
 Fock_UHF_loop: Fock-matrix UHF case using simple loop
 """
-function Fock_UHF_loop(Hcore,Pi,Pj,dim,tei)
+function Fock_loop_UHF(Hcore,Pi,Pj,dim,tei::Array{Float64,4})
     JK = zeros(dim,dim)
     @simd for µ in 1:dim
         for ν in 1:dim
@@ -351,7 +360,7 @@ Benchmark: RHF/def2-QZVPP on H2O with MBA:
 77.170879 seconds total, 0.320401 per Fock (1 thread)
 Warning: Uses threading by default. Turn off by export OMP_NUM_THREADS=1
 """
-#  function Fock_turbo(Hcore,P,dim,tei)
+#  function Fock_turbo_RHF(Hcore,P,dim,tei::Array{Float64,4})
 #     println("Fock_turbo disabled.")
 #     exit()
 #      JK = zeros(dim,dim)
@@ -371,7 +380,7 @@ Warning: Uses threading by default. Turn off by export OMP_NUM_THREADS=1
  """
  Fock_UHF_turbo: Fock-matrix UHF-case with @turbo macro
  """
-#  function Fock_UHF_turbo(Hcore,Pi,Pj,dim,tei)
+#  function Fock_turbo_UHF(Hcore,Pi,Pj,dim,tei::Array{Float64,4})
 #     JK = zeros(dim,dim)
 #     @turbo for µ in 1:dim
 #         for ν in 1:dim
@@ -393,7 +402,7 @@ Warning: Uses threading by default. Turn off by export OMP_NUM_THREADS=1
 #63.543055 seconds total, 0.354601 seconds per Fock  (LOOPVECT AND TULLIO LIBRARY LOADED, THREADED)
 #72.814342 seconds total, 0.398519 seconds per Fock  (LOOPVECT AND TULLIO LIBRARY LOADED, 1 THREAD)
 #"""
-#function Fock_tullio(Hcore,P,dim,tei)
+#function Fock_tullio(Hcore,P,dim,tei::Array{Float64,4})
 #    JK = zeros(dim,dim)
 #    @tullio JK[µ,ν] += P[λ,σ]*(tei[ν,µ,λ,σ]-0.5*tei[ν,λ,µ,σ])
 #    F = Hcore + JK
@@ -406,7 +415,7 @@ Warning: Uses threading by default. Turn off by export OMP_NUM_THREADS=1
 #Benchmark: RHF/def2-QZVPP on H2O with MBA: 
 #109.18 seconds total, 1.13 seconds per Fock (1 thread)
 #"""
-#function Fock_tensor(Hcore,P,dim,tei)
+#function Fock_tensor(Hcore,P,dim,tei::Array{Float64,4})
 #    JK = zeros(dim,dim)
 #    @tensor JK[µ,ν] += P[λ,σ]*(tei[ν,µ,λ,σ]-0.5*tei[ν,λ,µ,σ])
 #    F = Hcore + JK

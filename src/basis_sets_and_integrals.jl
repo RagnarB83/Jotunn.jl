@@ -1,16 +1,3 @@
-import Base.getindex
-
-"""
-Jint: Jotunn integral struct in sparse form
-"""
-struct Jint_sparse
-    #Original unique list of integral indices from GaussianBasis but with 1-indexing
-    unique_indices::Vector{NTuple{4, Int16}}
-    #Integral values
-    values::Vector{Float64}
-    length::Int64
-end
-
 #Calculate 2-electron integrals via GaussianBasis.jl
 """
 tei_calc: Calculate 2-electron integrals in 4 different ways
@@ -21,11 +8,9 @@ function tei_calc(bset,tei_type)
         #TODO: Create Jint object instead ??
         integrals = ERI_2e4c(bset)
     elseif tei_type == "sparse4c"
-        #Sparse. returns non-zero elements along with a index tuple
+        #Sparse form. Only unique sets of indices and integral values
         @time sparseintegrals = sparseERI_2e4c(bset)
-        println("Sparse integrals done. Now doing ordering")
-        #integrals = lookup_table_sparse_create(sparseintegrals)
-        #@time integrals = ordered_int_table_sparse(sparseintegrals)
+        println("Sparse integral calculation done.")
         println("Creating Jint object")
         @time integrals = Jint_sparse([i .+ 1 for i in sparseintegrals[1]],sparseintegrals[2],length(sparseintegrals[2]))
 

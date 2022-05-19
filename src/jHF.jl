@@ -1,17 +1,32 @@
 export jHF
+
+"""
+Jint: Jotunn integral struct in sparse form
+"""
+struct Jint_sparse
+    #Original unique list of integral indices from GaussianBasis but with 1-indexing
+    unique_indices::Vector{NTuple{4, Int16}}
+    #Integral values
+    values::Vector{Float64}
+    length::Int64
+end
+
+
 """
 Jotunn: jHF: a RHF/UHF program
 """
+
 function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="hcore", basisfile::String="none", maxiter::Int64=120, 
     print_final_matrices::Bool=false, rmsDP_threshold::Float64=5e-9, maxDP_threshold::Float64=1e-7, tei_type::String="sparse4c",
     energythreshold::Float64=1e-8, debugprint::Bool=false, fock_algorithm::String="loop", 
     levelshift::Bool=false, levelshift_val::Float64=0.10, lshift_thresh::Float64=0.01,
     damping::Bool=true, damping_val::Float64=0.4, damping_thresh::Float64=0.01,
     diis::Bool=false, diis_size::Int64=7, diis_thresh::Float64=0.01,
-    printlevel::Int64=1)
+    printlevel::Int64=1, fock4c_speedup::String="simd")
 
     print_program_header()
     global debugflag  = debugprint
+
 
     #Removing old matrix files if present
     if debugprint == true || print_final_matrices == true
@@ -86,7 +101,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     ##########################
     # CHOOSING FOCK ALGORITHM
     ##########################
-    #Choosing Fock algorithm (based on RHF vs. UHF, user-defined vs. best for small-system)
+    #Choosing Fock algorithm (based on RHF vs. UHF, 2el-int-type etc.)
     Fock,fock_algorithm = choose_Fock(HFtype,fock_algorithm,dim,tei_type)
 
     ##########################
@@ -95,6 +110,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     #Create initial guess for density matrix
     println("Providing guess for density matrix")
     if guess == "hcore"
+        println("Hcore guess used")
         #Setting P to 0. Means that Fock matrix becomes F = Hcore + 0. See Fock functions.
         if HFtype=="RHF"
             P = zeros(dim,dim)
@@ -117,7 +133,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     # SCF
     ##########################
     println("\nBeginning SCF iterations")
-    #Initializing some variables
+    #Initializing some variables tha will change during the iterations
     energy_old=0.0; energy=0.0; P_RMS=9999; finaliter=nothing
     if HFtype=="RHF" 
         eps=zeros(dim)
@@ -126,7 +142,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
         eps_⍺=zeros(dim); eps_β=zeros(dim); 
         P_⍺_old=deepcopy(P_⍺); P_β_old=deepcopy(P_β)
     end
-    #Initializing levelshift and damping flags
+    #Initializing levelshift, damping and DIIS flags
     if levelshift == true global levelshift_flag = true else levelshift_flag = false end
     if damping == true global damping_flag = true; else damping_flag = false end
     if diis == true global diis_flag = true; diis_error_matrices=nothing; Fockmatrices=nothing; 
@@ -141,11 +157,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
             #Possible damping of P before making Fock
             P = damping_control(P,P_old,damping,damping_val,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=damping_thresh)
             @time F = Fock(Hcore,P,dim,tei) #Make Fock-matrix
-            #if iter == 2
-            #    println("iter: $iter")
-            #    println("F: $F")
-            #    exit()
-            #end
+
             #Possible levelshifting of Fock before diagonalization
             F = levelshift_control(F,levelshift,levelshift_val,numoccorbs,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
             F′ = transpose(S_minhalf)*F*S_minhalf #Transform Fock matrix
@@ -275,5 +287,10 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     #Mulliken charges/spinpops, Mayer MBOs, dipole, all energy contributions,
     #orbital energies, occupation numbers, HFtype, numelectrons
     Resultsdict=Dict("energy"=>energy,"finaliter"=>finaliter)
+
+    #TIMINGS: TODO
+
     return Resultsdict
+
+
 end

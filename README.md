@@ -4,7 +4,6 @@ Primarily written to to be a simple, but general and easy-to-understand RHF/UHF 
 Might one day turn into something useful.
 
 
-
 ## Current features
 - 1 and 2-electron integrals via [GaussianBasis.jl](https://github.com/FermiQC/GaussianBasis.jl) and [libcint](https://github.com/sunqm/libcint).
 - Conventional RHF and UHF algorithm using 2-el integrals as full rank-4 tensor (4c) or sparse version (sparse4c)
@@ -38,7 +37,7 @@ Might one day turn into something useful.
 ## Dependencies (not in Julia standard library)
 - [GaussianBasis.jl](https://github.com/FermiQC/GaussianBasis.jl) (1 and 2-electron integrals)
 - [Molecules.jl](https://github.com/FermiQC/Molecules.jl) (helper program with GaussianBasis.jl)
-- [LoopVectorization.jl](https://github.com/JuliaSIMD/LoopVectorization.jl) (to speed up Fock matrix)
+- [LoopVectorization.jl](https://github.com/JuliaSIMD/LoopVectorization.jl) (only to speed up Fock when using full 4-rank TEIs )
 - [PrettyTables.jl](https://github.com/ronisbr/PrettyTables.jl) (pretty output)
 - [Crayons.jl](https://github.com/KristofferC/Crayons.jl) (pretty output)
 

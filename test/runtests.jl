@@ -1,7 +1,7 @@
 using Jotunn
 using Test
 
-@testset "Jotunn-tests" begin
+@testset verbose=true "Jotunn-tests" begin
     include("test_fragments.jl")
     include("test_RHF.jl")
     include("test_UHF.jl")
