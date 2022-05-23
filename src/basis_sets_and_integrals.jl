@@ -29,7 +29,8 @@ end
 """
 Calculate all 2-el index permutations for a given set of indices. Called by Fock.
 """
-function permutations(a,b,c,d)
+function permutations!(perms,a,b,c,d)
+    #println("Inside permutations, 1perms: $perms")
     #a,b,c,d=tup
     if a > b
         ab = a*(a+1)/2 + b
@@ -44,24 +45,49 @@ function permutations(a,b,c,d)
     γab = a !== b
     γcd = c !== d
     γxy = ab !== cd
+    #Setting everything to zero
+
+    perms .= 0 #Setting vector elements to zero
+    
+    #println("Inside permutations, 2perms: $perms")
+    #println("Here: perms: $perms")
     if γab && γcd && γxy
         #println("Case1: e.g. a!=b!=c!=d  and 1232 ")
-        return [(a,b,c,d),(b,a,c,d),(a,b,d,c),(c,d,a,b),(c,d,b,a),(b,a,d,c),(d,c,b,a),(d,c,a,b)]
+        #return [(a,b,c,d),(b,a,c,d),(a,b,d,c),(c,d,a,b),(c,d,b,a),(b,a,d,c),(d,c,b,a),(d,c,a,b)]
+        perms[1:32] .= a,b,c,d,b,a,c,d,a,b,d,c,c,d,a,b,c,d,b,a,b,a,d,c,d,c,b,a,d,c,a,b
+        return nothing
+        #return SA[(a,b,c,d),(b,a,c,d),(a,b,d,c),(c,d,a,b),(c,d,b,a),(b,a,d,c),(d,c,b,a),(d,c,a,b)]
     elseif γcd && γxy
         #println("Case2")
-        return [(a,b,c,d),(a,b,d,c),(c,d,a,b),(d,c,b,a)]
+        perms[1:16] .= a,b,c,d,a,b,d,c,c,d,a,b,d,c,b,a
+        return nothing
+        #return [(a,b,c,d),(a,b,d,c),(c,d,a,b),(d,c,b,a)]
+        #return SA[(a,b,c,d),(a,b,d,c),(c,d,a,b),(d,c,b,a)]
     elseif γab && γxy
         #println("Case3 (incomplete)")
-        return [(a,b,c,d),(b,a,c,d),(c,d,a,b),(c,d,b,a)]
+        perms[1:16] .= a,b,c,d,b,a,c,d,c,d,a,b,c,d,b,a
+        return nothing
+        #return [(a,b,c,d),(b,a,c,d),(c,d,a,b),(c,d,b,a)]
+        #return SA[(a,b,c,d),(b,a,c,d),(c,d,a,b),(c,d,b,a)]
     elseif γab && γcd
         #println("Case4")
-        return [(a,b,c,d),(b,a,c,d),(a,b,d,c),(b,a,d,c)]
+        perms[1:16] .= a,b,c,d,b,a,c,d,a,b,d,c,b,a,d,c
+        return nothing
+        #return [(a,b,c,d),(b,a,c,d),(a,b,d,c),(b,a,d,c)]
+        #return SA[(a,b,c,d),(b,a,c,d),(a,b,d,c),(b,a,d,c)]
     elseif γxy #a=b; c=d ab != cd
         #println("Case5: example: 1122")
-        return [(a,b,c,d),(c,d,a,b)]
+        perms[1:8] .= a,b,c,d,c,d,a,b
+        return nothing
+        #return [(a,b,c,d),(c,d,a,b)]
+        #return SA[(a,b,c,d),(c,d,a,b)]
     else
         #println("Case6, else. a=a=a=a. Adding nothing(already there)")
-        return [(a,b,c,d)]
+        perms[1:4] .= a,b,c,d
+        #println("Inside permutations, 3perms: $perms")
+        return nothing
+        #return [(a,b,c,d)]
+        #return SA[(a,b,c,d)]
     end
 end
 

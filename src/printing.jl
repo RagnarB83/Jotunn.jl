@@ -68,13 +68,13 @@ end
 print_calculation_setup: Print calculation setup
 """
 function print_calculation_settings(HFtype,basisset,dim,guess,tei_type,fock_algorithm,lowest_S_eigenval,
-        levelshift,levelshift_val,lshift_thresh,damping,damping_val,damping_thresh,diis,diis_size,diis_thresh)
+        levelshift,levelshift_val,lshift_thresh,damping,damping_val,damping_thresh,diis,diis_size,diis_startiter)
     labels=["HF type", "Basis set","No. basis functions","Guess", "2-electron type","Fock algorithm","S lowest eigenvalue", 
     "Levelshift", "Levelshift parameter", "Lshift-turnoff thresh.","Damping","Damping parameter", "Damp-turnoff thresh.",
-    "DIIS","DIIS vec size","DIIS thresh."]
+    "DIIS","DIIS vec size","DIIS start iter."]
     stuff=[HFtype,basisset,string(dim),guess,tei_type,fock_algorithm,lowest_S_eigenval,
         string(levelshift),levelshift_val,lshift_thresh,
-        string(damping),damping_val,damping_thresh,string(diis),string(diis_size),diis_thresh]
+        string(damping),damping_val,damping_thresh,string(diis),string(diis_size),diis_startiter]
     data=hcat(labels,stuff)
     print(Crayon(foreground = :green, bold = true), "CALCULATION SETTINGS\n",Crayon(reset=true))
     pretty_table(data; crop=:none,  noheader = true,
@@ -98,9 +98,12 @@ printlevel=1 => minimal printing
 printlevel >1 => more elaborate printing with SCF-iteration header
 """
 function iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,
-    rmsDP_threshold,P_MaxE,maxDP_threshold,levelshiftflag,damping_flag,diis_flag)
+    rmsDP_threshold,P_MaxE,maxDP_threshold,levelshiftflag,damping_flag,diis_flag,FP_comm)
     if printlevel > 1
         #Fair amount of printing
+        println("Damping: ", damping_flag)
+        println("Levelshift: ", levelshiftflag)
+        println("DIIS: ", diis_flag)
         println("Current energy: $energy")
         print("Energy change:",Crayon(foreground = colorvalue_threshold(abs(deltaE),energythreshold)), "$deltaE ",
             Crayon(reset=true)," (threshold: $energythreshold)\n")
@@ -108,7 +111,11 @@ function iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,
             Crayon(reset=true)," (threshold: $rmsDP_threshold)\n")
         print("Max-DP: ",Crayon(foreground = colorvalue_threshold(abs(P_MaxE),maxDP_threshold)), "$P_MaxE ",
             Crayon(reset=true)," (threshold: $maxDP_threshold)\n")
-    else
+        #[F,P] commut
+        println("Max[F,P]: ", maximum(FP_comm))
+        rms_comm = sqrt(sum(x -> x*x, FP_comm) / length(FP_comm))
+        println("RMS[F,P]: ", rms_comm)
+    elseif printlevel == 1
         #Minimal printing
         #@printf("%6d %17.10f %17.10f %17.10f %17.10f %10s %10s\n", iter, energy, deltaE,P_RMS,P_MaxE,levelshiftflag, "no")
         #Note: Crayon output might add ~1-1.5 sec in total per 70 iterations
@@ -120,6 +127,8 @@ function iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,
         @printf("%s%8s%s",Crayon(foreground = colorvalue_bool(damping_flag)) ,damping_flag,Crayon(reset=true))
         @printf("%s%8s%s",Crayon(foreground = colorvalue_bool(diis_flag)),diis_flag,Crayon(reset=true))
         @printf("\n")
+    else
+        #no SCF iteration printing
     end
 end
 

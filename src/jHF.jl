@@ -21,7 +21,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     energythreshold::Float64=1e-8, debugprint::Bool=false, fock_algorithm::String="loop", 
     levelshift::Bool=false, levelshift_val::Float64=0.10, lshift_thresh::Float64=0.01,
     damping::Bool=true, damping_val::Float64=0.4, damping_thresh::Float64=0.01,
-    diis::Bool=false, diis_size::Int64=7, diis_thresh::Float64=0.01,
+    diis::Bool=false, diis_size::Int64=5, diis_startiter::Int64=4, DIISBfac::Float64=1.05,
     printlevel::Int64=1, fock4c_speedup::String="simd")
 
     print_program_header()
@@ -67,8 +67,9 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
         exit()
     end
     #Print basic system properties
-    print_system(num_el,fragment.formula,E_ZZ,fragment.charge,fragment.mult,fragment.numatoms,unpaired_electrons)
-
+    if printlevel > 0
+        print_system(num_el,fragment.formula,E_ZZ,fragment.charge,fragment.mult,fragment.numatoms,unpaired_electrons)
+    end
     ##########################
     # INTEGRALS
     ##########################
@@ -93,7 +94,6 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     SVAL_minhalf = Diagonal(Sval)^-0.5
     Stemp = SVAL_minhalf*transpose(Svec)
     S_minhalf = Svec * Stemp
-
     println("Calculating 2-electron integrals (tei_type: $tei_type)")
     #Calculating two-electron integrals: tei_type: 4c, sparse4c
     @time tei = tei_calc(bset,tei_type)
@@ -108,14 +108,11 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     # GUESS
     ##########################
     #Create initial guess for density matrix
-    println("Providing guess for density matrix")
+    println("Providing guess for density matrix: $guess")
     if guess == "hcore"
-        println("Hcore guess used")
         #Setting P to 0. Means that Fock matrix becomes F = Hcore + 0. See Fock functions.
         if HFtype=="RHF"
             P = zeros(dim,dim)
-            guess_energy= E_ZZ + 0.5 * tr((Hcore+Hcore)*P) #Calculate guess energy
-            println("Energy of guess: $guess_energy Eh\n")
         else
             P_⍺ = zeros(dim,dim)
             P_β = zeros(dim,dim)
@@ -124,11 +121,11 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
         println("unknown guess")
         exit()
     end
-    
-    print_calculation_settings(HFtype,basisset,dim,guess,tei_type,
-        fock_algorithm,lowest_S_eigenval,levelshift,levelshift_val,lshift_thresh,
-        damping,damping_val,damping_thresh,diis,diis_size,diis_thresh)
-
+    if printlevel > 0
+        print_calculation_settings(HFtype,basisset,dim,guess,tei_type,
+            fock_algorithm,lowest_S_eigenval,levelshift,levelshift_val,lshift_thresh,
+            damping,damping_val,damping_thresh,diis,diis_size,diis_startiter)
+    end
     ##########################
     # SCF
     ##########################
@@ -145,8 +142,8 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     #Initializing levelshift, damping and DIIS flags
     if levelshift == true global levelshift_flag = true else levelshift_flag = false end
     if damping == true global damping_flag = true; else damping_flag = false end
-    if diis == true global diis_flag = true; diis_error_matrices=nothing; Fockmatrices=nothing; 
-    else global diis_flag = false;diis_error_matrices=nothing; Fockmatrices=nothing end
+    if diis == true global diis_flag = false; diis_error_matrices=[]; Fockmatrices=[]; energies=[];
+    else diis_flag = false; diis_error_matrices=nothing; Fockmatrices=nothing ; energies=[] end
     
     #SCF loop beginning
     if printlevel == 1 @printf("%4s%15s%16s%14s%14s%8s%8s%8s\n", "Iter", "Energy", "deltaE", "RMS-DP", "Max-DP", "Lshift", "Damp", "DIIS") end
@@ -157,20 +154,24 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
             #Possible damping of P before making Fock
             P = damping_control(P,P_old,damping,damping_val,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=damping_thresh)
             @time F = Fock(Hcore,P,dim,tei) #Make Fock-matrix
-
+            #println("Current F:", F)
+            
             #Possible levelshifting of Fock before diagonalization
+            #TODO: F or F′   ????
             F = levelshift_control(F,levelshift,levelshift_val,numoccorbs,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
             F′ = transpose(S_minhalf)*F*S_minhalf #Transform Fock matrix
-
+            #println("Current F′:", F′)
+            energy = E_ZZ + 0.5 * tr((Hcore+F)*P) #Calculate energy after Fock formation
+            FP_comm = FP_commutator(F,P,S)
+            #println("FP_comm: $FP_comm")
             # Possible DIIS extrapolation of F′ matrix before diagonalization
-            F′ = diis_control(F′,F,diis_error_matrices,Fockmatrices,diis,diis_size,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=diis_thresh)
-
+            F′ = diis_control(F′,F,P,S,S_minhalf,energy,diis_error_matrices,Fockmatrices,energies,diis,diis_size,DIISBfac,
+                P_RMS,rmsDP_threshold,iter,printlevel,FP_comm,diis_startiter)
             eps, C′ = eigen(F′) #Diagonalize transformed Fock to get eps and C'
             C = S_minhalf*C′ # Get C from C'
             P_old=deepcopy(P) #Keep copy of old P
             P = makedensity(C, dim, numoccorbs) #Calculate new P from C
-            energy = E_ZZ + 0.5 * tr((Hcore+F)*P) #Calculate energy
-
+            
             if debugprint == true write_matrices(F,C,P) end
         else
             #Possible damping of P matrices before making Fock
@@ -199,7 +200,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
             P_old=P_⍺_old+P_β_old
             P_⍺_β=P_⍺-P_β #spin density matrix
             energy = E_ZZ + 0.5 * tr((Hcore+F_⍺)*P_⍺) + 0.5 * tr((Hcore+F_β)*P_β)  #Calculate energy
-
+            FP_comm = "Fix for UHF"
             #if debugprint == true write_matrices(F,C,P) end
         end
 
@@ -212,30 +213,32 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
 
         #Printing per iteration
         iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,rmsDP_threshold,
-            P_MaxE,maxDP_threshold,levelshift_flag,damping_flag,diis_flag)
+            P_MaxE,maxDP_threshold,levelshift_flag,damping_flag,diis_flag,FP_comm)
 
         if P_MaxE < maxDP_threshold && P_RMS < rmsDP_threshold && abs(deltaE) < energythreshold
             print(Crayon(foreground = :green, bold = true), 
                 "\n                              SCF converged in $iter iterations! Hell yeah! 🎉\n\n",Crayon(reset=true))
             finaliter=iter
-            if HFtype == "RHF"
-                print_energy_contributions(energy,Hcore,F,P,T,E_ZZ)
-                #Printing of matrices if requested. 
-                if print_final_matrices == true 
-                    write_matrix_to_file(F,"Fmatrix")
-                    write_matrix_to_file(C,"Cmatrix")
-                    write_matrix_to_file(P,"Pmatrix")
-                end
-            else
-                #    print_energy_contributions(energy,Hcore,F,P,T,E_ZZ)
-                if print_final_matrices == true 
-                    write_matrix_to_file(P,"Pmatrix")
-                    write_matrix_to_file(C_⍺,"C_a_matrix")
-                    write_matrix_to_file(C_β,"C_b_matrix")
-                    write_matrix_to_file(F_⍺,"F_a_matrix")
-                    write_matrix_to_file(F_β,"F_b_matrix")
-                    write_matrix_to_file(P_⍺,"P_a_matrix")
-                    write_matrix_to_file(P_β,"P_b_matrix")
+            if printlevel > 0
+                if HFtype == "RHF"
+                    print_energy_contributions(energy,Hcore,F,P,T,E_ZZ)
+                    #Printing of matrices if requested. 
+                    if print_final_matrices == true 
+                        write_matrix_to_file(F,"Fmatrix")
+                        write_matrix_to_file(C,"Cmatrix")
+                        write_matrix_to_file(P,"Pmatrix")
+                    end
+                else
+                    #    print_energy_contributions(energy,Hcore,F,P,T,E_ZZ)
+                    if print_final_matrices == true 
+                        write_matrix_to_file(P,"Pmatrix")
+                        write_matrix_to_file(C_⍺,"C_a_matrix")
+                        write_matrix_to_file(C_β,"C_b_matrix")
+                        write_matrix_to_file(F_⍺,"F_a_matrix")
+                        write_matrix_to_file(F_β,"F_b_matrix")
+                        write_matrix_to_file(P_⍺,"P_a_matrix")
+                        write_matrix_to_file(P_β,"P_b_matrix")
+                    end
                 end
             end
             break #Break from loop
@@ -252,36 +255,39 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     #################################################
     #SCF loop done. Calculate and print properties
     #ORBITALS AND POPULATION ANALYSIS
-    if HFtype=="RHF"
-        #Orbitals
-        occupations=makeoccupationarray(numoccorbs,dim,2.0) #Occupation array
-        print_MO_energies(occupations,eps)
-        #Mulliken
-        charges = mulliken(S,P,bset,fragment.elems)
-        print_Mulliken(charges,fragment.elems)
-        P_⍺_β=zeros(dim,dim) #dummy spin-density
-        #Mayer
-        MBOs = Mayer_BO(S,P,P_⍺_β, bset_atom_mapping)
-        print_Mayer_analysis(MBOs,fragment.elems)
-    else
-        #Orbitals
-        occupations_⍺=makeoccupationarray(numoccorbs_⍺,dim,1.0) #Occupation array
-        occupations_β=makeoccupationarray(numoccorbs_β,dim,1.0) #Occupation array
-        print_MO_energies(occupations_⍺,occupations_β,eps_⍺,eps_β)
-        #Mulliken
-        P_⍺_β=P_⍺_β
-        charges, spinpops = mulliken(S,P,P_⍺_β,bset,fragment.elems)
-        print_Mulliken(charges,fragment.elems,spinpops)
-        #Mayer
-        MBOs = Mayer_BO(S,P,P_⍺_β, bset_atom_mapping)
-        print_Mayer_analysis(MBOs,fragment.elems)
+    if printlevel > 0
+        if HFtype=="RHF"
+            #Orbitals
+            occupations=makeoccupationarray(numoccorbs,dim,2.0) #Occupation array
+            print_MO_energies(occupations,eps)
+            #Mulliken
+            charges = mulliken(S,P,bset,fragment.elems)
+            print_Mulliken(charges,fragment.elems)
+            P_⍺_β=zeros(dim,dim) #dummy spin-density
+            #Mayer
+            MBOs = Mayer_BO(S,P,P_⍺_β, bset_atom_mapping)
+            print_Mayer_analysis(MBOs,fragment.elems)
+        else
+            #Orbitals
+            occupations_⍺=makeoccupationarray(numoccorbs_⍺,dim,1.0) #Occupation array
+            occupations_β=makeoccupationarray(numoccorbs_β,dim,1.0) #Occupation array
+            print_MO_energies(occupations_⍺,occupations_β,eps_⍺,eps_β)
+            #Mulliken
+            P_⍺_β=P_⍺_β
+            charges, spinpops = mulliken(S,P,P_⍺_β,bset,fragment.elems)
+            print_Mulliken(charges,fragment.elems,spinpops)
+            #Mayer
+            MBOs = Mayer_BO(S,P,P_⍺_β, bset_atom_mapping)
+            print_Mayer_analysis(MBOs,fragment.elems)
+        end
     end
 
     #####################################
     # PRINT FINAL RESULTS
     #####################################
-    print_final_results(energy,fragment,num_el,basisset,HFtype,fock_algorithm,finaliter)
-
+    if printlevel > 0
+        print_final_results(energy,fragment,num_el,basisset,HFtype,fock_algorithm,finaliter)
+    end
     #Gathering results into Dict and returning.
     #TODO: Add more here. 
     #Mulliken charges/spinpops, Mayer MBOs, dipole, all energy contributions,

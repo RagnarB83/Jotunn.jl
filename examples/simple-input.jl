@@ -10,8 +10,12 @@ mol=H2O
 basis="def2-svp"
 
 #Measure 1st run separately as it includes compilation
-result_sp4c=jHF(mol, basis; maxiter=200, fock_algorithm="loop", HFtype="RHF", tei_type="sparse4c")
-result_4c=jHF(mol, basis; maxiter=200, fock_algorithm="loop", HFtype="RHF", tei_type="4c")
+#@time result_sp_norm=jHF(mol, basis; maxiter=200, fock_algorithm="loop", HFtype="RHF", tei_type="sparse4c")
+#@time result_sp_norm=jHF(mol, basis; maxiter=200, fock_algorithm="loop", HFtype="RHF", tei_type="sparse4c")
 
-println("Energy (sp): $(result_sp4c["energy"])")
-println("Energy (4c): $(result_4c["energy"])")
+@time result_sp_perm=jHF(mol, basis; maxiter=200, fock_algorithm="loop2", HFtype="RHF", tei_type="sparse4c", damping=false)
+@time result_sp_perm=jHF(mol, basis; maxiter=200, fock_algorithm="loop2", HFtype="RHF", tei_type="sparse4c", damping=false)
+
+#println("Energy (sp norm): $(result_sp_norm["energy"])")
+#println("Energy (sp_perm): $(result_sp_perm["energy"])")
+

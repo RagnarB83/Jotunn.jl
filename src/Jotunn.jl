@@ -4,21 +4,26 @@ Integrals via the GaussianBasis.jl interface to Libcint
 """
 module Jotunn
 
+#From standard library
 using LinearAlgebra
 using Statistics
+#Extra packages
 using Printf
 using DelimitedFiles
 using PrettyTables
 using Crayons
+using Molecules #FermiQC
+using GaussianBasis #FermiQC
+
+#Temporary. to be disabled
+using IterTools
+using StaticArrays
 
 #Linear Algebra speed-up packages
 #using LoopVectorization
 #using TensorOperations
 #using Tullio
 
-#From FermiQC
-using Molecules
-using GaussianBasis
 
 #Source-code files
 include("fragment.jl")
