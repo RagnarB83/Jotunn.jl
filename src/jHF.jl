@@ -11,9 +11,24 @@ struct Jint_sparse
     length::Int64
 end
 
+"""
+JDIIS: Jotunn DIIS struct
+"""
+Base.@kwdef mutable struct JDIIS
+    #Settings
+    active::Bool #whether DIIS method is used in this job
+    diis_size::Int64=5
+    diis_startiter::Int64=2
+    DIISBfac::Float64=1.05
+    #Data
+    diis_flag::Bool=false #whether DIIS is active in this iteration
+    errorvectors::Vector{Matrix{Float64}}=[]
+    Fockmatrices::Vector{Matrix{Float64}}=[]
+    energies::Vector{Float64}=[]
+end
 
 """
-Jotunn: jHF: a RHF/UHF program
+jHF: the Jotunn RHF/UHF program
 """
 
 function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="hcore", basisfile::String="none", maxiter::Int64=120, 
@@ -139,12 +154,18 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
         eps_⍺=zeros(dim); eps_β=zeros(dim); 
         P_⍺_old=deepcopy(P_⍺); P_β_old=deepcopy(P_β)
     end
-    #Initializing levelshift, damping and DIIS flags
+
+    #Initializing levelshift, damping and DIIS settings
     if levelshift == true global levelshift_flag = true else levelshift_flag = false end
     if damping == true global damping_flag = true; else damping_flag = false end
-    if diis == true global diis_flag = false; diis_error_matrices=[]; Fockmatrices=[]; energies=[];
-    else diis_flag = false; diis_error_matrices=nothing; Fockmatrices=nothing ; energies=[] end
-    
+    if diis == true
+        diisobj=JDIIS(active=true,diis_size=diis_size,diis_startiter=diis_startiter,DIISBfac=DIISBfac)
+        #global diis_flag = false
+    else
+        diisobj=JDIIS(active=false)
+        #diis_flag = false; diis_error_matrices=nothing; Fockmatrices=nothing ; energies=[]
+    end
+
     #SCF loop beginning
     if printlevel == 1 @printf("%4s%15s%16s%14s%14s%8s%8s%8s\n", "Iter", "Energy", "deltaE", "RMS-DP", "Max-DP", "Lshift", "Damp", "DIIS") end
     
@@ -162,11 +183,13 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
             F′ = transpose(S_minhalf)*F*S_minhalf #Transform Fock matrix
             #println("Current F′:", F′)
             energy = E_ZZ + 0.5 * tr((Hcore+F)*P) #Calculate energy after Fock formation
-            FP_comm = FP_commutator(F,P,S)
+            FP_comm = FP_commutator(F,P,S,S_minhalf)
             #println("FP_comm: $FP_comm")
             # Possible DIIS extrapolation of F′ matrix before diagonalization
-            F′ = diis_control(F′,F,P,S,S_minhalf,energy,diis_error_matrices,Fockmatrices,energies,diis,diis_size,DIISBfac,
-                P_RMS,rmsDP_threshold,iter,printlevel,FP_comm,diis_startiter)
+            #F′ = diis_control(diisobj,F′,F,P,FP_comm,energy,diis_error_matrices,
+            #    Fockmatrices,energies,diis,diis_size,DIISBfac,
+            #    P_RMS,rmsDP_threshold,iter,printlevel,FP_comm,diis_startiter)
+            F′ = diis_control(diisobj,F′,energy,FP_comm,iter)
             eps, C′ = eigen(F′) #Diagonalize transformed Fock to get eps and C'
             C = S_minhalf*C′ # Get C from C'
             P_old=deepcopy(P) #Keep copy of old P
@@ -213,7 +236,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
 
         #Printing per iteration
         iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,rmsDP_threshold,
-            P_MaxE,maxDP_threshold,levelshift_flag,damping_flag,diis_flag,FP_comm)
+            P_MaxE,maxDP_threshold,levelshift_flag,damping_flag,diisobj.diis_flag,FP_comm)
 
         if P_MaxE < maxDP_threshold && P_RMS < rmsDP_threshold && abs(deltaE) < energythreshold
             print(Crayon(foreground = :green, bold = true), 

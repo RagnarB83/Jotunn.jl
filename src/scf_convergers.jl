@@ -12,70 +12,69 @@ end
 
 
 """
-diis_control: Do DIIS extrapolation or not
+diis_control: Do DIIS extrapolation if active
 """
-function diis_control(F′,F,P,S,S_minhalf,energy,diis_error_matrices,Fockmatrices,energies,diis,diis_size,DIISBfac,
-        P_RMS,rmsDP_threshold,iter,printlevel, FP_comm,diis_startiter)
-        global diis_flag
-    if diis == true
-        println("DIIS method active. Iteration: $iter  (DIIS startiter: $diis_startiter)")
+function diis_control(diisobj,F′,energy,FP_comm,iter)
+    println("DIIS control")
+    dump(diisobj)
+        #global diis_flag
+    if diisobj.active == true
+        println("DIIS method active. Iteration: $iter  (DIIS startiter: $(diisobj.diis_startiter))")
         
-        #Calculate current-iteration DIIS error vector based on [F,P]
-        #diis_err=FP_comm #Direct
-        diis_err = diis_error_vector(FP_comm,S_minhalf) # orthonormal basis
-        #diis_err = 2*diis_error_vector(FP_comm,S_minhalf) #orthonormal basis scaled by X
-        
+        #DIIS error vector
+        diis_err = FP_comm
         println("Max DIIS error: $(maximum(diis_err))")
         rms_diis_err= sqrt(sum(x -> x*x, diis_err) / length(diis_err))
         println("RMS DIIS error: $rms_diis_err")
 
         #Add error vector to array and F′ to Fockmatrices
-        if iter >= diis_startiter
-            println("DIIS is active")
+        if iter >= diisobj.diis_startiter
+            println("DIIS is active. Now storing Fock and error vector for iteration.")
             #Throwing out old DIIS vector if we are at diis_size
-            #NOTE: Throw out high-energy vector instead?
-            if length(diis_error_matrices) == diis_size
-                diis_error_matrices = diis_error_matrices[2:end]
-                Fockmatrices = Fockmatrices[2:end]
-                energies = energies[2:end]
+            #NOTE: Throw out high-energy vector instead? or 
+            if length(diisobj.errorvectors) == diisobj.diis_size
+                diisobj.errorvectors = diisobj.errorvectors[2:end]
+                diisobj.Fockmatrices = diisobj.Fockmatrices[2:end]
+                diisobj.energies = diisobj.energies[2:end]
             end
             #Add current error vector,Fock matrix and energy to lists
-            push!(diis_error_matrices,diis_err)
-            push!(Fockmatrices,F′)
-            push!(energies,energy)
+            push!(diisobj.errorvectors,diis_err)
+            push!(diisobj.Fockmatrices,F′)
+            push!(diisobj.energies,energy)
         else
-            println("DIIS has not yet reached diis_startiter=$diis_startiter")
+            println("DIIS has not yet reached diis_startiter=$(diisobj.diis_startiter). Not storing data.")
         end
 
         #DO DIIS extrapolation if enough data
-        if length(diis_error_matrices) > 1
-            println("DIIS error matrix size: $(length(diis_error_matrices))")
-            diis_flag=true #Now setting DIIS flag to true
+        if length(diisobj.errorvectors) > 1
+            println("DIIS has enough data. Doing extrapolation")
+            println("DIIS error matrix size: $(length(diisobj.errorvectors))")
+            diisobj.diis_flag=true #Now setting DIIS flag to true
 
             #Bias DIIS to Fock matrix with lowest energy
             #relenergies=[i-minimum(energies) for i in energies]
-            lowestE_index=findmin(energies)[2]
-            for diis_m_index in eachindex(diis_error_matrices)
+            lowestE_index=findmin(diisobj.energies)[2]
+            for diis_m_index in eachindex(diisobj.errorvectors)
                 if diis_m_index != lowestE_index
-                    diis_m=diis_error_matrices[diis_m_index]
+                    diis_m=diisobj.errorvectors[diis_m_index]
                     for i in 1:size(diis_m)[1]
-                        diis_m[i,i] = DIISBfac*diis_m[i,i]
+                        diis_m[i,i] = diisobj.DIISBfac*diis_m[i,i]
                     end
                 end
             end
 
             #Defining B
-            B=zeros(length(diis_error_matrices)+1,length(diis_error_matrices)+1)
+            B=zeros(length(diisobj.errorvectors)+1,length(diisobj.errorvectors)+1)
             B[end, :].=-1
             B[:, end].=-1
             B[end, end]=0.0
-            for i in eachindex(diis_error_matrices)
-                for j in eachindex(diis_error_matrices)
-                    B[i,j] = dot(diis_error_matrices[i],diis_error_matrices[j])
+            for i in eachindex(diisobj.errorvectors)
+                for j in eachindex(diisobj.errorvectors)
+                    B[i,j] = dot(diisobj.errorvectors[i],diisobj.errorvectors[j])
                 end
             end
             #Z, residual vector
-            Z = zeros(length(diis_error_matrices)+1)
+            Z = zeros(length(diisobj.errorvectors)+1)
             Z[end] = -1 #Last value is -1
 
             #Solve linear equation to get ci coefficeints
@@ -86,16 +85,16 @@ function diis_control(F′,F,P,S,S_minhalf,energy,diis_error_matrices,Fockmatric
             #Extrapolate F′ from old F′ and ci coefficients
             newF′=zeros(size(F′))
             for i in 1:length(coeffs)
-                newF′ += coeffs[i]*Fockmatrices[i]
+                newF′ += coeffs[i]*diisobj.Fockmatrices[i]
             end
             return newF′
         else
             #Not enough matrices to do extrapolation. Returning  F′
-            println("Not enough matrices ($(length(diis_error_matrices))) to do DIIS extrapolation")
+            println("Not enough matrices ($(length(diisobj.errorvectors))) to do DIIS extrapolation")
             return F′
         end
     else
-        #No DIIS: unchanged F′
+        #No DIIS used in job: unchanged F′
         return F′
     end
 end
@@ -182,14 +181,17 @@ end
 """
 [F,P] commutator
 """
-function FP_commutator(F,P,S)
-    commut = F*P*S-S*P*F
+function FP_commutator(F,P,S,Sminhalf)
+    # regular
+    #commut = F*P*S-S*P*F
+    #orthonormalized basis
+    commut= transpose(Sminhalf)*(F*P*S-S*P*F)*Sminhalf
     return commut
 end
 
-"DIIS error vector"
-function diis_error_vector(FP_comm,Sminhalf)
-    #commut= FP_commutator(F,P,S)
-    error_vec = transpose(Sminhalf)*FP_comm*Sminhalf
-    return error_vec
-end
+#"DIIS error vector"
+#function diis_error_vector(FP_comm,Sminhalf)
+#    #commut= FP_commutator(F,P,S)
+#    error_vec = transpose(Sminhalf)*FP_comm*Sminhalf
+#    return error_vec
+#end

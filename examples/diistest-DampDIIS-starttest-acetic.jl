@@ -11,10 +11,12 @@ maxiter=100
 
 #Comparing DIIS with different startup times
 values=[2,4,6,8,10,12,14,16,18,20,22]
-Resultdict_Damp_DIIS=Dict{String,Vector{Float64}}()
+Resultdict_Damp_DIIS=Dict{String,Vector{Any}}()
 for val in values
     @time result = jHF(Acetic, basisname; maxiter=maxiter, HFtype="RHF",
         diis=true, diis_startiter=val, levelshift=false, damping=true,printlevel=1)
+        println("Resultdict_Damp_DIIS:", Resultdict_Damp_DIIS)
+        println("result:", result)
         Resultdict_Damp_DIIS["DIIS"*string(val)] = [result["energy"],result["finaliter"]]
 end
 
