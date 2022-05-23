@@ -406,3 +406,45 @@ function Fock_loop_sparse2(Hcore,P,dim,tei)
     F = Hcore + G
     return F
 end
+
+
+"""
+Fock_loop_sparse_perm: RHF Sparse-integral loop-version RHF of Fock-matrix with permutations
+Allocates too much and hence slower
+"""
+#Fock_loop(Hcore,P,dim,indices,tei)
+function Fock_loop_sparse_perm_RHF(Hcore,P,dim,tei::Jint_sparse)
+    #println("THIS IS Fock_loop_sparse")
+    G = zeros(dim,dim)
+    perms= zeros(Int8,32) #8*4=32 is the max number of indices
+    #perms = SVector{32}(zeros(32))
+    #Looping over tuples of indices from sparse2e4c
+    for i in eachindex(tei.unique_indices)
+        #This is the unique set of indices provided by GaussianBasis/libcint (sparse)
+        #uniq_tuple=tei.unique_indices[i]
+        #println("Calling permutations")
+        permutations!(perms,tei.unique_indices[i]...)
+        #println("After perms:", perms)
+        #println("type perms :", typeof(perms))
+        #exit()
+        #println("perms: $perms type: $(typeof(perms))")
+        # This is the associated integral value
+        #println("val: ")
+        value=tei.values[i] 
+        #println("here") 
+        #Looping over all symmetry-related sets of indices of uniq_tuple
+        #for p in perms
+        #println("part loop begin")
+        for (µ,ν,λ,σ) in partition(perms, 4)
+            if µ == 0
+                break
+            end
+            #println("type of perms[p]", typeof(perms[p]))
+            #µ,ν,λ,σ=p
+            @inbounds G[µ,ν] += P[λ,σ]*value # J
+            @inbounds G[µ,λ] -= 0.5*P[ν,σ]*value # K
+        end
+    end
+    F = Hcore + G
+    return F
+end

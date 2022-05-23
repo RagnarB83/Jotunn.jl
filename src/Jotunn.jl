@@ -15,10 +15,6 @@ using Crayons
 using Molecules #FermiQC
 using GaussianBasis #FermiQC
 
-#Temporary. to be disabled
-using IterTools
-using StaticArrays
-
 #Linear Algebra speed-up packages
 #using LoopVectorization
 #using TensorOperations
