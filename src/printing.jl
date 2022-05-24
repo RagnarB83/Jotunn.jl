@@ -1,6 +1,16 @@
 #############################
 #Printing stuff
 ##############################
+
+"""
+print_if_level2: Simple print function that only prints if printlevel is met or higher
+"""
+function print_if_level2(string,printlevel)
+    if printlevel >= 2
+        println(string)
+    end
+end
+
 """
 printdebug: Simple print function that only prints if global debugflag is true
 """
@@ -47,7 +57,7 @@ function print_program_header()
     print(Crayon(foreground = :blue, bold = true), "                   JOTUNN\n",Crayon(reset=true))
     print(Crayon(foreground = :white, bold = false), "a simple quantum chemistry program in Julia\n",Crayon(reset=true))
     print(Crayon(foreground = :white, bold = true), "="^50*"\n",Crayon(reset=true))
-    print(Crayon(foreground = :yellow, bold = true), "\njHF module: a RHF/UHF program\n",Crayon(reset=true))
+    print(Crayon(foreground = :yellow, bold = true), "\njHF: a RHF/UHF program\n",Crayon(reset=true))
 end
 
 """
@@ -74,7 +84,7 @@ function print_calculation_settings(HFtype,basisset,dim,guess,tei_type,fock_algo
     "DIIS","DIIS vec size","DIIS start iter."]
     stuff=[HFtype,basisset,string(dim),guess,tei_type,fock_algorithm,lowest_S_eigenval,
         string(levelshift),levelshift_val,lshift_thresh,
-        string(damping),damping_val,damping_thresh,string(diis),string(diis_size),diis_startiter]
+        string(damping),damping_val,damping_thresh,string(diis),string(diis_size),string(diis_startiter)]
     data=hcat(labels,stuff)
     print(Crayon(foreground = :green, bold = true), "CALCULATION SETTINGS\n",Crayon(reset=true))
     pretty_table(data; crop=:none,  noheader = true,

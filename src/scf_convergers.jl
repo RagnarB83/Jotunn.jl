@@ -1,37 +1,51 @@
 """
+compute_core_guess: Compute MO coefficients from F=Hcore
+"""
+function compute_core_guess(Hcore,S_minhalf)
+    F=Hcore #initial Fock matrix
+    F′ = transpose(S_minhalf)*F*S_minhalf #Transform Fock matrix
+    eps, C′ = eigen(F′) #Diagonalize transformed Fock to get eps and C'
+    C = S_minhalf*C′ # Get C from C'
+    return C
+end
+
+"""
 deltaPcheck: Compare density matrices by RMSE and MaxE
 """
 function deltaPcheck(P, Pold)
-    diff = Pold - P
-    mae=abs(mean(diff))
+    diff = [abs(i) for i in (P-Pold)]
     #rms_e=sqrt(sum([i^2 for i in diff])/length(diff))
-    rms_e = sqrt(sum(x -> x*x, diff) / length(diff))
-    max_e=maximum(diff)
+    #rms_e = sqrt(sum(x -> x*x, diff) / (length(diff)))
+    #Only unique values used in RMS calc.
+    rms_e = sqrt(sum([abs(i)^2 for i in LowerTriangular(diff)])/(size(diff)[1]*(size(diff)[1]+1)))
+    max_e=maximum([abs(i) for i in diff])
     return rms_e, max_e
 end
 
 
+
+
+
 """
-diis_control: Do DIIS extrapolation if active
+diis_control: Do DIIS extrapolation of F′
 """
-function diis_control(diisobj,F′,energy,FP_comm,iter)
-    println("DIIS control")
-    dump(diisobj)
-        #global diis_flag
+function diis_control(diisobj,F′,energy,FP_comm,iter,printlevel)
     if diisobj.active == true
-        println("DIIS method active. Iteration: $iter  (DIIS startiter: $(diisobj.diis_startiter))")
+        print_if_level2("DIIS method active. Iteration: $iter  (DIIS startiter: $(diisobj.diis_startiter))",printlevel)
         
         #DIIS error vector
         diis_err = FP_comm
-        println("Max DIIS error: $(maximum(diis_err))")
+        max_diis_err=maximum(diis_err)
         rms_diis_err= sqrt(sum(x -> x*x, diis_err) / length(diis_err))
-        println("RMS DIIS error: $rms_diis_err")
-
+        #Setting Max DIIS error in object for convergence check
+        diisobj.max_diis_error=max_diis_err
+        print_if_level2("Max DIIS error: $max_diis_err",printlevel)
+        print_if_level2("RMS DIIS error: $rms_diis_err",printlevel)
         #Add error vector to array and F′ to Fockmatrices
         if iter >= diisobj.diis_startiter
-            println("DIIS is active. Now storing Fock and error vector for iteration.")
-            #Throwing out old DIIS vector if we are at diis_size
-            #NOTE: Throw out high-energy vector instead? or 
+            print_if_level2("DIIS is active. Now storing Fock and error vector for iteration.",printlevel)
+            #Throwing out old DIIS vector if we are at diis_size already
+            #NOTE: Throw out high-energy vector instead? or largest error vector
             if length(diisobj.errorvectors) == diisobj.diis_size
                 diisobj.errorvectors = diisobj.errorvectors[2:end]
                 diisobj.Fockmatrices = diisobj.Fockmatrices[2:end]
@@ -42,17 +56,16 @@ function diis_control(diisobj,F′,energy,FP_comm,iter)
             push!(diisobj.Fockmatrices,F′)
             push!(diisobj.energies,energy)
         else
-            println("DIIS has not yet reached diis_startiter=$(diisobj.diis_startiter). Not storing data.")
+            print_if_level2("DIIS has not yet reached diis_startiter=$(diisobj.diis_startiter). Not storing data.",printlevel)
         end
 
-        #DO DIIS extrapolation if enough data
+        #DO DIIS extrapolation as soon as there are enough vectors
         if length(diisobj.errorvectors) > 1
-            println("DIIS has enough data. Doing extrapolation")
-            println("DIIS error matrix size: $(length(diisobj.errorvectors))")
+            print_if_level2("DIIS extrapolation will be performed",printlevel)
             diisobj.diis_flag=true #Now setting DIIS flag to true
 
-            #Bias DIIS to Fock matrix with lowest energy
-            #relenergies=[i-minimum(energies) for i in energies]
+            #Bias DIIS to the Fock matrix with lowest energy by multiplying diagonal elements of
+            #the other error vectors with 1.05 or so
             lowestE_index=findmin(diisobj.energies)[2]
             for diis_m_index in eachindex(diisobj.errorvectors)
                 if diis_m_index != lowestE_index
@@ -80,7 +93,7 @@ function diis_control(diisobj,F′,energy,FP_comm,iter)
             #Solve linear equation to get ci coefficeints
             coeffs = B\Z
             coeffs = coeffs[1:end-1] #Removing last value (lambda)
-            println("DIIS coefficients: ", coeffs)
+            print_if_level2("DIIS coefficients: $coeffs",printlevel)
 
             #Extrapolate F′ from old F′ and ci coefficients
             newF′=zeros(size(F′))
@@ -90,7 +103,7 @@ function diis_control(diisobj,F′,energy,FP_comm,iter)
             return newF′
         else
             #Not enough matrices to do extrapolation. Returning  F′
-            println("Not enough matrices ($(length(diisobj.errorvectors))) to do DIIS extrapolation")
+            print_if_level2("Not enough matrices ($(length(diisobj.errorvectors))) to do DIIS extrapolation",printlevel)
             return F′
         end
     else
@@ -189,9 +202,22 @@ function FP_commutator(F,P,S,Sminhalf)
     return commut
 end
 
-#"DIIS error vector"
-#function diis_error_vector(FP_comm,Sminhalf)
-#    #commut= FP_commutator(F,P,S)
-#    error_vec = transpose(Sminhalf)*FP_comm*Sminhalf
-#    return error_vec
-#end
+
+function check_for_convergence(deltaE,energythreshold,diisobj,diis_error_conv_threshold,iter)
+
+    #Current behaviour: if either deltaE or MaxDIISerror condition is fulfilled, we signal convergence
+    if abs(deltaE) < energythreshold
+        println("Energy convergence threshold reached: $(abs(deltaE)) < $energythreshold")
+        print(Crayon(foreground = :green, bold = true), 
+            "\n                              SCF converged in $iter iterations! Hell yeah! 🎉\n\n",
+            Crayon(reset=true))
+        return true
+    elseif diisobj.max_diis_error < diis_error_conv_threshold
+        println("DIIS convergence threshold reached: $(diisobj.max_diis_error) < $diis_error_conv_threshold")
+        print(Crayon(foreground = :green, bold = true), 
+            "\n                              SCF converged in $iter iterations! Hell yeah! 🎉\n\n",
+            Crayon(reset=true))
+        return true
+    end
+    return false
+end

@@ -9,7 +9,7 @@ using Crayons
 basisname="def2-svp"
 maxiter=100
 
-#Comparing DIIS with different startup times
+#Comparing Damp+DIIS with different startup times
 values=[2,4,6,8,10,12,14,16,18,20,22]
 Resultdict_Damp_DIIS=Dict{String,Vector{Any}}()
 for val in values

@@ -23,6 +23,7 @@ Base.@kwdef mutable struct JDIIS
     #Data
     diis_flag::Bool=false #whether DIIS is active in this iteration
     errorvectors::Vector{Matrix{Float64}}=[]
+    max_diis_error::Float64=999999
     Fockmatrices::Vector{Matrix{Float64}}=[]
     energies::Vector{Float64}=[]
 end
@@ -37,6 +38,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     levelshift::Bool=false, levelshift_val::Float64=0.10, lshift_thresh::Float64=0.01,
     damping::Bool=true, damping_val::Float64=0.4, damping_thresh::Float64=0.01,
     diis::Bool=false, diis_size::Int64=5, diis_startiter::Int64=4, DIISBfac::Float64=1.05,
+    diis_error_conv_threshold::Float64=5e-7,
     printlevel::Int64=1, fock4c_speedup::String="simd")
 
     print_program_header()
@@ -123,12 +125,13 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     # GUESS
     ##########################
     #Create initial guess for density matrix
-    println("Providing guess for density matrix: $guess")
+    println("Providing guess: $guess")
     if guess == "hcore"
-        #Setting P to 0. Means that Fock matrix becomes F = Hcore + 0. See Fock functions.
         if HFtype=="RHF"
-            P = zeros(dim,dim)
+            C = compute_core_guess(Hcore,S_minhalf)
+            P = makedensity(C, dim, numoccorbs) #Calculate new P from C
         else
+            #TODO:
             P_⍺ = zeros(dim,dim)
             P_β = zeros(dim,dim)
         end
@@ -136,6 +139,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
         println("unknown guess")
         exit()
     end
+
     if printlevel > 0
         print_calculation_settings(HFtype,basisset,dim,guess,tei_type,
             fock_algorithm,lowest_S_eigenval,levelshift,levelshift_val,lshift_thresh,
@@ -145,7 +149,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     # SCF
     ##########################
     println("\nBeginning SCF iterations")
-    #Initializing some variables tha will change during the iterations
+    #Initializing some variables that will change during the iterations
     energy_old=0.0; energy=0.0; P_RMS=9999; finaliter=nothing
     if HFtype=="RHF" 
         eps=zeros(dim)
@@ -160,10 +164,8 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     if damping == true global damping_flag = true; else damping_flag = false end
     if diis == true
         diisobj=JDIIS(active=true,diis_size=diis_size,diis_startiter=diis_startiter,DIISBfac=DIISBfac)
-        #global diis_flag = false
     else
-        diisobj=JDIIS(active=false)
-        #diis_flag = false; diis_error_matrices=nothing; Fockmatrices=nothing ; energies=[]
+        diisobj=JDIIS(active=false) #Creating dummy JDIIS object
     end
 
     #SCF loop beginning
@@ -172,29 +174,26 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     @time for iter in 1:maxiter
         if printlevel > 1 print_iteration_header(iter) end
         if HFtype == "RHF"
-            #Possible damping of P before making Fock
+            #Optional damping of P before making Fock
             P = damping_control(P,P_old,damping,damping_val,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=damping_thresh)
-            @time F = Fock(Hcore,P,dim,tei) #Make Fock-matrix
+
+            F = Fock(Hcore,P,dim,tei) #Make Fock-matrix
+            FP_comm = FP_commutator(F,P,S,S_minhalf) #Calculating [F,P] commutator (for DIIS)
             #println("Current F:", F)
-            
             #Possible levelshifting of Fock before diagonalization
-            #TODO: F or F′   ????
             F = levelshift_control(F,levelshift,levelshift_val,numoccorbs,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
+            
             F′ = transpose(S_minhalf)*F*S_minhalf #Transform Fock matrix
             #println("Current F′:", F′)
             energy = E_ZZ + 0.5 * tr((Hcore+F)*P) #Calculate energy after Fock formation
-            FP_comm = FP_commutator(F,P,S,S_minhalf)
-            #println("FP_comm: $FP_comm")
             # Possible DIIS extrapolation of F′ matrix before diagonalization
-            #F′ = diis_control(diisobj,F′,F,P,FP_comm,energy,diis_error_matrices,
-            #    Fockmatrices,energies,diis,diis_size,DIISBfac,
-            #    P_RMS,rmsDP_threshold,iter,printlevel,FP_comm,diis_startiter)
-            F′ = diis_control(diisobj,F′,energy,FP_comm,iter)
+            F′ = diis_control(diisobj,F′,energy,FP_comm,iter,printlevel)
             eps, C′ = eigen(F′) #Diagonalize transformed Fock to get eps and C'
             C = S_minhalf*C′ # Get C from C'
+            #println("Current C:", C)
             P_old=deepcopy(P) #Keep copy of old P
             P = makedensity(C, dim, numoccorbs) #Calculate new P from C
-            
+            #println("Final P:", P)
             if debugprint == true write_matrices(F,C,P) end
         else
             #Possible damping of P matrices before making Fock
@@ -231,6 +230,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
         # CONVERGENCE CHECK
         ##########################
         deltaE = energy-energy_old
+        #NOTE: P_RMS is still off
         P_RMS, P_MaxE = deltaPcheck(P, P_old)
         energy_old=energy
 
@@ -238,9 +238,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
         iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,rmsDP_threshold,
             P_MaxE,maxDP_threshold,levelshift_flag,damping_flag,diisobj.diis_flag,FP_comm)
 
-        if P_MaxE < maxDP_threshold && P_RMS < rmsDP_threshold && abs(deltaE) < energythreshold
-            print(Crayon(foreground = :green, bold = true), 
-                "\n                              SCF converged in $iter iterations! Hell yeah! 🎉\n\n",Crayon(reset=true))
+        if check_for_convergence(deltaE,energythreshold,diisobj,diis_error_conv_threshold,iter) == true
             finaliter=iter
             if printlevel > 0
                 if HFtype == "RHF"
@@ -264,8 +262,9 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
                     end
                 end
             end
-            break #Break from loop
+            break
         end
+
         if iter == maxiter
             println("Failed to converge in $maxiter iterations!")
             #Gathering results into Dict and returning
