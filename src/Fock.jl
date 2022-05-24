@@ -7,8 +7,8 @@
 """
 choose_Fock: Choosing Fock algorithm based on user-chosen HFtype,fock_algorithm variables etc.
 """
-function choose_Fock(HFtype,fock_algorithm,dim,tei_type)
-    println("Choosing Fock algorithm.")
+function choose_Fock(HFtype,fock_algorithm,dim,tei_type,printlevel)
+    print_if_level("Choosing Fock algorithm.",1,printlevel)
     #Choosing loop algo for small system (Loopvectorization compilation takes a bit long)
     #Disabling for now since we are not using LoopVectorization
     #H2O def2-TZVPP and smaller benefits
@@ -31,15 +31,15 @@ function choose_Fock(HFtype,fock_algorithm,dim,tei_type)
             #end
 
             if fock_algorithm == "loop" #fast for small systems
-                println("Using Fock_loop")
+                print_if_level("Using Fock_loop",1,printlevel)
                 Fock=Fock_loop_RHF
             elseif fock_algorithm == "turbo" #faster for larger systems (but long compilation).
-                println("Using Fock_turbo (requires LoopVectorization to be loaded")
+                print_if_level("Using Fock_turbo (requires LoopVectorization to be loaded",1,printlevel)
                 Fock=Fock_turbo
             end
         elseif tei_type == "sparse4c"
             if fock_algorithm == "loop" || fock_algorithm == "loop_sparse" #generally recommended
-                println("Using Fock_loop_sparse")
+                print_if_level("Using Fock_loop_sparse",1,printlevel)
                 Fock=Fock_loop_sparse_RHF
                 fock_algorithm="loop_sparse"
             else
@@ -52,12 +52,12 @@ function choose_Fock(HFtype,fock_algorithm,dim,tei_type)
             if fock_algorithm == "loop"
                 Fock=Fock_loop_UHF
             elseif fock_algorithm == "turbo"
-                println("Using Fock_turbo_UHF (requires LoopVectorization to be loaded")
+                print_if_level("Using Fock_turbo_UHF (requires LoopVectorization to be loaded",1,printlevel)
                 Fock=Fock_UHF_turbo_UHF
             end
         elseif tei_type == "sparse4c"
             if fock_algorithm == "loop"
-                println("Using Fock_loop_sparse_UHF")
+                print_if_level("Using Fock_loop_sparse_UHF",1,printlevel)
                 Fock=Fock_loop_sparse_UHF
                 fock_algorithm="loop_sparse(UHF)"
             else

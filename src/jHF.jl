@@ -41,7 +41,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     diis_error_conv_threshold::Float64=5e-7,
     printlevel::Int64=1, fock4c_speedup::String="simd")
 
-    print_program_header()
+    print_program_header(printlevel)
     global debugflag  = debugprint
 
 
@@ -64,7 +64,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     #Check whether chosen multiplicity makes sense before continuing
     check_multiplicity(num_el,fragment.charge,fragment.mult)
     if fragment.mult != 1 && HFtype=="RHF"
-        println("RHF and multiplicity > 1 is not possible. Switching to UHF")
+        print_if_level("RHF and multiplicity > 1 is not possible. Switching to UHF",1,printlevel)
         HFtype="UHF"
     end
     #RHF vs. UHF
@@ -91,13 +91,13 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     # INTEGRALS
     ##########################
     #Setting up 1-electron and 2-electron integrals
-    println("Integrals provided via GaussianBasis.jl library")       
+    print_if_level("Integrals provided via GaussianBasis.jl library",1,printlevel)  
     #Basis set object creation by GaussianBasis
-    bset = basis_set_create(basisset,fragment.elems,fragment.coords; basisfile=basisfile)
+    bset = basis_set_create(basisset,fragment.elems,fragment.coords; basisfile=basisfile,printlevel)
     dim = bset.nbas
     #Simple array of atom indices that maps onto bfs
     bset_atom_mapping = bf_atom_mapping(bset)
-    println("\nCalculating 1-electron integrals")
+    print_if_level("\nCalculating 1-electron integrals",1,printlevel) 
     #Calculating 1-electron integrals
     T = kinetic(bset)
     V = nuclear(bset)
@@ -111,21 +111,21 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     SVAL_minhalf = Diagonal(Sval)^-0.5
     Stemp = SVAL_minhalf*transpose(Svec)
     S_minhalf = Svec * Stemp
-    println("Calculating 2-electron integrals (tei_type: $tei_type)")
+    print_if_level("Calculating 2-electron integrals (tei_type: $tei_type)",1,printlevel)
     #Calculating two-electron integrals: tei_type: 4c, sparse4c
-    time_tei=@elapsed tei = tei_calc(bset,tei_type)
-    println("Time calculating 2-electron integrals: $time_tei")
+    time_tei=@elapsed tei = tei_calc(bset,tei_type,printlevel)
+    print_if_level("Time calculating 2-electron integrals: $time_tei",1,printlevel)
     ##########################
     # CHOOSING FOCK ALGORITHM
     ##########################
     #Choosing Fock algorithm (based on RHF vs. UHF, 2el-int-type etc.)
-    Fock,fock_algorithm = choose_Fock(HFtype,fock_algorithm,dim,tei_type)
+    Fock,fock_algorithm = choose_Fock(HFtype,fock_algorithm,dim,tei_type,printlevel)
 
     ##########################
     # GUESS
     ##########################
     #Create initial guess for density matrix
-    println("Providing guess: $guess")
+    print_if_level("Providing guess: $guess",1,printlevel)
     if guess == "hcore"
         if HFtype=="RHF"
             C = compute_core_guess(Hcore,S_minhalf)
@@ -149,7 +149,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     ##########################
     # SCF
     ##########################
-    println("\nBeginning SCF iterations")
+    print_if_level("\nBeginning SCF iterations",1,printlevel)
     #Initializing some variables that will change during the iterations
     energy_old=0.0; energy=0.0; P_RMS=9999; finaliter=nothing
     if HFtype=="RHF" 
@@ -253,7 +253,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
 
         #NOTE: UHF, only checking convergence for diisobj_⍺ !
         #TODO: Make more general
-        if check_for_convergence(deltaE,energythreshold,diisobj,diis_error_conv_threshold,iter) == true
+        if check_for_convergence(deltaE,energythreshold,diisobj,diis_error_conv_threshold,iter,printlevel) == true
             finaliter=iter
             if printlevel > 0
                 if HFtype == "RHF"
@@ -287,7 +287,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
             return Resultsdict
         end
     end
-    println("Time calculating SCF: $time_scf")
+    print_if_level("Time calculating SCF: $time_scf",1,printlevel)
     #################################################
     # ORBITALS, POPULATION ANALYSIS AND PROPERTIES
     #################################################

@@ -2,17 +2,16 @@
 """
 tei_calc: Calculate 2-electron integrals in 4 different ways
 """
-function tei_calc(bset,tei_type)
+function tei_calc(bset,tei_type,printlevel)
     if tei_type == "4c"
         #Full 4-rank  tensor (1-based indexing already used here)
         #TODO: Create Jint object instead ??
         integrals = ERI_2e4c(bset)
     elseif tei_type == "sparse4c"
         #Sparse form. Only unique sets of indices and integral values
-        @time sparseintegrals = sparseERI_2e4c(bset)
-        println("Sparse integral calculation done.")
-        println("Creating Jint object")
-        @time integrals = Jint_sparse([i .+ 1 for i in sparseintegrals[1]],sparseintegrals[2],length(sparseintegrals[2]))
+        sparseintegrals = sparseERI_2e4c(bset)
+        print_if_level("Sparse integral calculation done.",1,printlevel)
+        integrals = Jint_sparse([i .+ 1 for i in sparseintegrals[1]],sparseintegrals[2],length(sparseintegrals[2]))
 
     elseif tei_type == "3c"
         #3c version. Requires auxiliary basis set
@@ -96,7 +95,7 @@ end
 read_basis_file: Read ORCA-style basis set file and return dictionary of element:basis-info-dict
 """
 function read_basis_file(filename,elems; format="orca")
-    println("Reading basis-set file: $filename")
+    print_if_level("Reading basis-set file: $filename",1,printlevel)
     #Element names for ORCA-style basis set files
     element_names=Dict("HYDROGEN" => "H", "CARBON" => "C", "HELIUM" => "He", 
     "HELIUM" => "He", "CARBON" => "C", "NITROGEN" => "N", "OXYGEN" => "O", "FLUORINE" => "F")
@@ -175,8 +174,8 @@ end
 basis_set_create: From basis-set-name, elements and coordinates, create a BasisSet object (GaussianBasis.jl)
 Option: built-in basis, manual definition or read from ORCA-format basis file
 """
-function basis_set_create(basis,elems,coordinates; basisfile="none")
-    println("Creating basis set object")
+function basis_set_create(basis,elems,coordinates; basisfile="none",printlevel)
+    print_if_level("Creating basis set object",1,printlevel)
     #get coordinates as a multi-linestring (for Molecules.jl):
     coords_string = array_to_string(elems,coordinates)
     if basis == "manual"
@@ -206,7 +205,6 @@ function basis_set_create(basis,elems,coordinates; basisfile="none")
 
         #0. Read basis set from file into dictionary
         basis_dict = read_basis_file(basisfile,elems,format="orca")
-        println("basis_dict:", basis_dict)
         #Initialize Basis function element dictionary
         #Dict of element: [GaussianBasis,GaussianBasis]
         elems_BasisFunctions_dict=Dict()

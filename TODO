@@ -5,6 +5,7 @@ BUGS and CLEANUP:
 - Unify printlevel (0,1,2,3,4) so that we can get almost no output (0), basic (1), more (2), even more (3) 
 and debug output (4) 
 - JInt formation might allocate too much and takes too long
+- Add geometry printout in beginning: printlevel=2 and higher
 
 FEATURES
 - Write/read functionality for a wavefunction file. Use for guess="read" in jHF

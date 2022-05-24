@@ -3,10 +3,12 @@
 ##############################
 
 """
-print_if_level2: Simple print function that only prints if printlevel is met or higher
+print_if_level: Simple print function that only prints if printlevel is met or higher
+level: level desired for this particular printing call
+printlevel: the global printlevel for the job
 """
-function print_if_level2(string,printlevel)
-    if printlevel >= 2
+function print_if_level(string,level,printlevel)
+    if printlevel >= level
         println(string)
     end
 end
@@ -52,12 +54,14 @@ end
 """
 print_program_header: Print Jotunn program header
 """
-function print_program_header()
-    print(Crayon(foreground = :white, bold = true), "="^50*"\n",Crayon(reset=true))
-    print(Crayon(foreground = :blue, bold = true), "                   JOTUNN\n",Crayon(reset=true))
-    print(Crayon(foreground = :white, bold = false), "a simple quantum chemistry program in Julia\n",Crayon(reset=true))
-    print(Crayon(foreground = :white, bold = true), "="^50*"\n",Crayon(reset=true))
-    print(Crayon(foreground = :yellow, bold = true), "\njHF: a RHF/UHF program\n",Crayon(reset=true))
+function print_program_header(printlevel)
+    if printlevel >= 1
+        print(Crayon(foreground = :white, bold = true), "="^50*"\n",Crayon(reset=true))
+        print(Crayon(foreground = :blue, bold = true), "                   JOTUNN\n",Crayon(reset=true))
+        print(Crayon(foreground = :white, bold = false), "a simple quantum chemistry program in Julia\n",Crayon(reset=true))
+        print(Crayon(foreground = :white, bold = true), "="^50*"\n",Crayon(reset=true))
+        print(Crayon(foreground = :yellow, bold = true), "\njHF: a RHF/UHF program\n",Crayon(reset=true))
+    end
 end
 
 """

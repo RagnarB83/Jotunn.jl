@@ -31,7 +31,7 @@ diis_control: Do DIIS extrapolation of F′
 """
 function diis_control(diisobj,F′,energy,FP_comm,iter,printlevel)
     if diisobj.active == true
-        print_if_level2("DIIS method active. Iteration: $iter  (DIIS startiter: $(diisobj.diis_startiter))",printlevel)
+        print_if_level("DIIS method active. Iteration: $iter  (DIIS startiter: $(diisobj.diis_startiter))",2,printlevel)
         
         #DIIS error vector
         diis_err = FP_comm
@@ -39,11 +39,11 @@ function diis_control(diisobj,F′,energy,FP_comm,iter,printlevel)
         rms_diis_err= sqrt(sum(x -> x*x, diis_err) / length(diis_err))
         #Setting Max DIIS error in object for convergence check
         diisobj.max_diis_error=max_diis_err
-        print_if_level2("Max DIIS error: $max_diis_err",printlevel)
-        print_if_level2("RMS DIIS error: $rms_diis_err",printlevel)
+        print_if_level("Max DIIS error: $max_diis_err",2,printlevel)
+        print_if_level("RMS DIIS error: $rms_diis_err",2,printlevel)
         #Add error vector to array and F′ to Fockmatrices
         if iter >= diisobj.diis_startiter
-            print_if_level2("DIIS is active. Now storing Fock and error vector for iteration.",printlevel)
+            print_if_level("DIIS is active. Now storing Fock and error vector for iteration.",2,printlevel)
             #Throwing out old DIIS vector if we are at diis_size already
             #NOTE: Throw out high-energy vector instead? or largest error vector
             if length(diisobj.errorvectors) == diisobj.diis_size
@@ -56,12 +56,12 @@ function diis_control(diisobj,F′,energy,FP_comm,iter,printlevel)
             push!(diisobj.Fockmatrices,F′)
             push!(diisobj.energies,energy)
         else
-            print_if_level2("DIIS has not yet reached diis_startiter=$(diisobj.diis_startiter). Not storing data.",printlevel)
+            print_if_level("DIIS has not yet reached diis_startiter=$(diisobj.diis_startiter). Not storing data.",2,printlevel)
         end
 
         #DO DIIS extrapolation as soon as there are enough vectors
         if length(diisobj.errorvectors) > 1
-            print_if_level2("DIIS extrapolation will be performed",printlevel)
+            print_if_level("DIIS extrapolation will be performed",2,printlevel)
             diisobj.diis_flag=true #Now setting DIIS flag to true
             global damping_flag = false #Makes sure  damping is off when DIIS extrapolation is on
             #TODO: Revisit above
@@ -95,7 +95,7 @@ function diis_control(diisobj,F′,energy,FP_comm,iter,printlevel)
             #Solve linear equation to get ci coefficeints
             coeffs = B\Z
             coeffs = coeffs[1:end-1] #Removing last value (lambda)
-            print_if_level2("DIIS coefficients: $coeffs",printlevel)
+            print_if_level("DIIS coefficients: $coeffs",2,printlevel)
 
             #Extrapolate F′ from old F′ and ci coefficients
             newF′=zeros(size(F′))
@@ -105,7 +105,7 @@ function diis_control(diisobj,F′,energy,FP_comm,iter,printlevel)
             return newF′
         else
             #Not enough matrices to do extrapolation. Returning  F′
-            print_if_level2("Not enough matrices ($(length(diisobj.errorvectors))) to do DIIS extrapolation",printlevel)
+            print_if_level("Not enough matrices ($(length(diisobj.errorvectors))) to do DIIS extrapolation",2,printlevel)
             return F′
         end
     else
@@ -205,20 +205,25 @@ function FP_commutator(F,P,S,Sminhalf)
 end
 
 
-function check_for_convergence(deltaE,energythreshold,diisobj,diis_error_conv_threshold,iter)
+function check_for_convergence(deltaE,energythreshold,diisobj,diis_error_conv_threshold,iter,printlevel)
 
     #Current behaviour: if either deltaE or MaxDIISerror condition is fulfilled, we signal convergence
     if abs(deltaE) < energythreshold
-        println("Energy convergence threshold reached: $(abs(deltaE)) < $energythreshold")
-        print(Crayon(foreground = :green, bold = true), 
-            "\n                              SCF converged in $iter iterations! Hell yeah! 🎉\n\n",
-            Crayon(reset=true))
-        return true
-    elseif diisobj.max_diis_error < diis_error_conv_threshold
-        println("DIIS convergence threshold reached: $(diisobj.max_diis_error) < $diis_error_conv_threshold")
-        print(Crayon(foreground = :green, bold = true), 
-            "\n                              SCF converged in $iter iterations! Hell yeah! 🎉\n\n",
-            Crayon(reset=true))
+        print_if_level("Energy convergence threshold reached: $(abs(deltaE)) < $energythreshold",1,printlevel)
+        if printlevel >= 1
+            print(Crayon(foreground = :green, bold = true), 
+                "\n                              SCF converged in $iter iterations! Hell yeah! 🎉\n\n",
+                Crayon(reset=true))
+        end
+            return true
+    #If DIIS error is converged and energy threshold off by 10
+    elseif diisobj.max_diis_error < diis_error_conv_threshold && abs(deltaE) < energythreshold*10
+        print_if_level("DIIS convergence threshold reached: $(diisobj.max_diis_error) < $diis_error_conv_threshold",1,printlevel)
+        if printlevel >= 1
+            print(Crayon(foreground = :green, bold = true), 
+                "\n                              SCF converged in $iter iterations! Hell yeah! 🎉\n\n",
+                Crayon(reset=true))
+        end
         return true
     end
     return false
