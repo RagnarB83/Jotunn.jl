@@ -122,6 +122,7 @@ function iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,
         print("Max-DP: ",Crayon(foreground = colorvalue_threshold(abs(P_MaxE),maxDP_threshold)), "$P_MaxE ",
             Crayon(reset=true)," (threshold: $maxDP_threshold)\n")
         #[F,P] commut
+        println("FP_comm:", FP_comm)
         println("Max[F,P]: ", maximum(FP_comm))
         rms_comm = sqrt(sum(x -> x*x, FP_comm) / length(FP_comm))
         println("RMS[F,P]: ", rms_comm)

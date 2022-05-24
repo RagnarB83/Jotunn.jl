@@ -7,8 +7,12 @@ using Crayons
 
 
 basisname="sto-3g"
-maxiter=30
+maxiter=60
 
 #Comparing DIIS with different startup times
     @time result = jHF(H2O, basisname; maxiter=maxiter, HFtype="RHF",
-        diis=true, diis_startiter=4, levelshift=false, damping=false,printlevel=1)
+        diis=true, diis_startiter=4, levelshift=false, damping=true,printlevel=1)
+
+#Comparing DIIS with different startup times
+    @time result = jHF(H2O, basisname; maxiter=maxiter, HFtype="UHF",
+        diis=true, diis_startiter=4, levelshift=false, damping=true,printlevel=1)

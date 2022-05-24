@@ -63,6 +63,8 @@ function diis_control(diisobj,F′,energy,FP_comm,iter,printlevel)
         if length(diisobj.errorvectors) > 1
             print_if_level2("DIIS extrapolation will be performed",printlevel)
             diisobj.diis_flag=true #Now setting DIIS flag to true
+            global damping_flag = false #Makes sure  damping is off when DIIS extrapolation is on
+            #TODO: Revisit above
 
             #Bias DIIS to the Fock matrix with lowest energy by multiplying diagonal elements of
             #the other error vectors with 1.05 or so

@@ -10,7 +10,7 @@ Might one day turn into something useful.
 - Fock matrix speedup (4c) via [LoopVectorization.jl](https://github.com/JuliaSIMD/LoopVectorization.jl)
 - Mulliken population analysis (RHF and UHF)
 - Mayer bond orders (RHF and UHF)
-- SCF convergence aids: levelshifting, static damping
+- SCF convergence aids: DIIS, levelshifting, static damping
 - Basis sets:
     - Support for all internal basis sets in [GaussianBasis.jl](https://github.com/FermiQC/GaussianBasis.jl).
     - Support for reading in external basis set in ORCA format.
@@ -20,7 +20,6 @@ Might one day turn into something useful.
     - Further fine-tuning of Fock code for sparse 2el-integral version.
     - Density fitting
 - Improving SCF convergence:
-    - DIIS
     - Dynamic damping 
     - Better guess than Hcore
 - DFT support:

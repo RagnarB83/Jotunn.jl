@@ -1,9 +1,10 @@
 BUGS and CLEANUP:
-- JInt formation allocates too much and takes too long
+- DIIS: rewrite UHF for DIIS (avoid extrapolation of both Fa and Fb)
 - DIIS: better throwout-vector scheme
-- Normalize DIIS, Damping and Levelshift
+- Unify DIIS, Damping and Levelshift switching
 - Unify printlevel (0,1,2,3,4) so that we can get almost no output (0), basic (1), more (2), even more (3) 
 and debug output (4) 
+- JInt formation might allocate too much and takes too long
 
 FEATURES
 - Write/read functionality for a wavefunction file. Use for guess="read" in jHF
