@@ -4,7 +4,7 @@ using Plots
 using PrettyTables
 
 #Reading XYZ-files into list of Jotunn fragments
-xyzdir="/Users/rb269145/Jotunn-DEV/Jotunn-benchmarking/n-alkanes/xyzfiles"
+xyzdir="./xyzfiles"
 molecules=[]
 xyzfiles=sort(readdir(xyzdir), lt=natural) #natural sorting 
 for file in xyzfiles
@@ -18,7 +18,7 @@ end
 #######################
 #Settings
 WFmethod="RHF"
-basis="STO-3G"
+basis="sto-3g"
 
 Resultdict=Dict{String,Vector{Any}}()
 
@@ -46,7 +46,6 @@ pretty_table(data; crop=:none,  header=["Mol", "Iter", "Time(s)"], formatters = 
 
 
 
-
 #######################
 #Plotting 
 #######################
@@ -55,17 +54,6 @@ Plots.plot(Catoms,jotunn_times, lw=2, seriestype = :line, linecolor= :blue, labe
 Plots.plot!(Catoms, jotunn_times, seriestype = :scatter, markercolor= :blue, title = "Timings for set: n-alkanes. $WFmethod/$basis",
      label="Jotunn", grid=false, legend=:topleft)
 
-#Fermi.jl data
-fermi_times=jotunn_times*1.1 #FAKE
-Plots.plot!(Catoms,fermi_times, lw=2, seriestype = :line, linecolor= :red, label="Fermi", grid=false)
-Plots.plot!(Catoms, fermi_times, seriestype = :scatter, markercolor= :red, title = "Timings for set: n-alkanes. $WFmethod/$basis",
-    label="Fermi", grid=false, legend=:topleft)
-
-#ORCA5 data
-orca_times=jotunn_times*1.2 #FAKE
-Plots.plot!(Catoms,orca_times, lw=2, seriestype = :line, linecolor= :green, label="ORCA", grid=false)
-Plots.plot!(Catoms, orca_times, seriestype = :scatter, markercolor= :green, title = "Timings for set: n-alkanes. $WFmethod/$basis",
-    label="ORCA", grid=false, legend=:topleft)
 
 xlabel!("Carbon chainlength")
 ylabel!("Time (seconds)")

@@ -38,7 +38,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     energythreshold::Float64=1e-8, debugprint::Bool=false, fock_algorithm::String="loop", 
     levelshift::Bool=false, levelshift_val::Float64=0.10, lshift_thresh::Float64=0.01,
     damping::Bool=true, damping_val::Float64=0.4, damping_thresh::Float64=0.01,
-    diis::Bool=false, diis_size::Int64=5, diis_startiter::Int64=2, DIISBfac::Float64=1.05,
+    diis::Bool=true, diis_size::Int64=5, diis_startiter::Int64=4, DIISBfac::Float64=1.05,
     diis_error_conv_threshold::Float64=5e-7,
     printlevel::Int64=1, fock4c_speedup::String="simd")
     #Timing whole function
@@ -173,7 +173,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     end
 
     #SCF loop beginning
-    if printlevel == 1 @printf("%4s%15s%16s%14s%14s%8s%8s%8s\n", "Iter", "Energy", "deltaE", "RMS-DP", "Max-DP", "Lshift", "Damp", "DIIS") end
+    if printlevel == 1 @printf("%4s%15s%16s%14s%14s%8s%8s%8s%10s\n", "Iter", "Energy", "deltaE", "RMS-DP", "Max-DP", "Lshift", "Damp", "DIIS", "Max[F,P]") end
     
     time_scf=@elapsed for iter in 1:maxiter
         if printlevel > 1 print_iteration_header(iter) end

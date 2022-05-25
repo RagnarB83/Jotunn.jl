@@ -141,6 +141,7 @@ function iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,
         @printf("%s%8s%s",Crayon(foreground = colorvalue_bool(levelshiftflag)),levelshiftflag,Crayon(reset=true))
         @printf("%s%8s%s",Crayon(foreground = colorvalue_bool(damping_flag)) ,damping_flag,Crayon(reset=true))
         @printf("%s%8s%s",Crayon(foreground = colorvalue_bool(diis_flag)),diis_flag,Crayon(reset=true))
+        @printf("%8.4f",maximum(FP_comm))
         @printf("\n")
     else
         #no SCF iteration printing
