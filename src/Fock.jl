@@ -23,7 +23,7 @@ function choose_Fock(HFtype,fock_algorithm,dim,tei_type,printlevel)
                 Fock=Fock_loop_RHF
             elseif fock_algorithm == "turbo" #faster for larger systems (but long compilation).
                 print_if_level("Using Fock_turbo (requires LoopVectorization to be loaded",1,printlevel)
-                Fock=Fock_turbo
+                Fock=Fock_turbo_RHF
             end
         elseif tei_type == "sparse4c"
             if fock_algorithm == "loop" || fock_algorithm == "loop_sparse" #generally recommended
@@ -310,22 +310,22 @@ Benchmark: RHF/def2-QZVPP on H2O with MBA:
 77.170879 seconds total, 0.320401 per Fock (1 thread)
 Warning: Uses threading by default. Turn off by export OMP_NUM_THREADS=1
 """
-#  function Fock_turbo_RHF(Hcore,P,dim,tei::Array{Float64,4})
-#     println("Fock_turbo disabled.")
-#     exit()
-#      JK = zeros(dim,dim)
-#      @turbo for µ in 1:dim
-#          for ν in 1:dim
-#              for λ in 1:dim
-#                  for σ in 1:dim
-#                      JK[µ,ν] += P[λ,σ]*(tei[ν,µ,λ,σ]-0.5*tei[ν,λ,µ,σ])
-#                  end
-#              end
-#          end
-#      end
-#      F = Hcore + JK
-#      return F
-#  end
+  function Fock_turbo_RHF(Hcore,P,dim,tei::Array{Float64,4})
+     #println("Fock_turbo disabled.")
+     #exit()
+      JK = zeros(dim,dim)
+      @turbo for µ in 1:dim
+          for ν in 1:dim
+              for λ in 1:dim
+                  for σ in 1:dim
+                      JK[µ,ν] += P[λ,σ]*(tei[ν,µ,λ,σ]-0.5*tei[ν,λ,µ,σ])
+                  end
+              end
+          end
+      end
+      F = Hcore + JK
+      return F
+  end
 
  """
  Fock_UHF_turbo: Fock-matrix UHF-case with @turbo macro
