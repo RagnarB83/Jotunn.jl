@@ -32,14 +32,17 @@ end
 jHF: the Jotunn RHF/UHF program
 """
 
-function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="hcore", basisfile::String="none", maxiter::Int64=120, 
-    print_final_matrices::Bool=false, rmsDP_threshold::Float64=5e-9, maxDP_threshold::Float64=1e-7, tei_type::String="sparse4c",
+function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="hcore", 
+    basisfile::String="none", maxiter::Int64=120, print_final_matrices::Bool=false, 
+    rmsDP_threshold::Float64=5e-9, maxDP_threshold::Float64=1e-7, tei_type::String="sparse4c",
     energythreshold::Float64=1e-8, debugprint::Bool=false, fock_algorithm::String="loop", 
     levelshift::Bool=false, levelshift_val::Float64=0.10, lshift_thresh::Float64=0.01,
     damping::Bool=true, damping_val::Float64=0.4, damping_thresh::Float64=0.01,
     diis::Bool=false, diis_size::Int64=5, diis_startiter::Int64=2, DIISBfac::Float64=1.05,
     diis_error_conv_threshold::Float64=5e-7,
     printlevel::Int64=1, fock4c_speedup::String="simd")
+    #Timing whole function
+    totaltime=@elapsed begin
 
     print_program_header(printlevel)
     global debugflag  = debugprint
@@ -85,7 +88,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     end
     #Print basic system properties
     if printlevel > 0
-        print_system(num_el,fragment.formula,E_ZZ,fragment.charge,fragment.mult,fragment.numatoms,unpaired_electrons)
+        print_system(num_el,fragment.prettyformula,E_ZZ,fragment.charge,fragment.mult,fragment.numatoms,unpaired_electrons)
     end
     ##########################
     # INTEGRALS
@@ -333,7 +336,8 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
     Resultsdict=Dict("energy"=>energy,"finaliter"=>finaliter)
 
     #TIMINGS: TODO
-
+end
+Resultsdict["time"]=totaltime
     return Resultsdict
 
 

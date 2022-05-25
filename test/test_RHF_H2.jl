@@ -75,11 +75,10 @@ end
     @test isapprox(result["energy"],ref_energy)
 end
 
-#Linear algebra problem with this one when solving Ax+b in DIIS
-#@testset "RHF/STO-3G on H2 (diis+damping+levelshift)" begin
-#   #Simple call
-#    result= jHF(H2, "sto-3g"; printlevel=3, diis=true, damping=true, levelshift=true)
-#    #RHF/STO-3G H2 (r=0.74) from ORCA
-#    ref_energy=-1.116759307204
-#    @test isapprox(result["energy"],ref_energy)
-#end
+@testset "RHF/STO-3G on H2 (diis+damping+levelshift)" begin
+   #Simple call
+    result= jHF(H2, "sto-3g"; printlevel=0, diis=true, damping=true, levelshift=true)
+    #RHF/STO-3G H2 (r=0.74) from ORCA
+    ref_energy=-1.116759307204
+    @test isapprox(result["energy"],ref_energy)
+end

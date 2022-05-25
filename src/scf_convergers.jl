@@ -93,7 +93,17 @@ function diis_control(diisobj,F′,energy,FP_comm,iter,printlevel)
             Z[end] = -1 #Last value is -1
 
             #Solve linear equation to get ci coefficeints
-            coeffs = B\Z
+            try
+                coeffs = B\Z
+            catch problem
+                if isa(problem,LinearAlgebra.SingularException)
+                    print_if_level("Singular matrix during DIIS solve. Skipping extrapolation in this step",2,printlevel)
+                    return F′
+                end
+                print_if_level("Unknown DIIS problem. Skipping extrapolation in this step.",2,printlevel)
+                return F′
+            end
+            
             coeffs = coeffs[1:end-1] #Removing last value (lambda)
             print_if_level("DIIS coefficients: $coeffs",2,printlevel)
 

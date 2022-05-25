@@ -8,6 +8,9 @@ and debug output (4)
 - Add geometry printout in beginning: printlevel=2 and higher
 
 FEATURES
+- Optimal damping algorithm (ODA)
+- EDIIS+DIIS
+- Parallelization : threading
 - Write/read functionality for a wavefunction file. Use for guess="read" in jHF
   and also for standalone plot_MO/plot_density functions.
   Options:
@@ -18,6 +21,11 @@ FEATURES
   - JSON3: https://github.com/quinnj/JSON3.jl  (text)
 
   https://discourse.julialang.org/t/how-to-save-and-read-a-structure/71031/20
+
+- Wfn file format standards:
+ - https://gaussian.com/interfacing/
+ - https://github.com/theochem/iodata/pull/178
+ - https://chemrxiv.org/engage/api-gateway/chemrxiv/assets/orp/resource/item/61cc3d33d1f662f9ec491b32/original/mwfn-a-strict-concise-and-extensible-format-for-electronic-wavefunction-storage-and-exchange.pdf
 
 - Option to write Cube file for MOs and densities.
 - Prescreening: libcint should already do standard integral prescreening (Schwarz or similar).

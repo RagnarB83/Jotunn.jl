@@ -59,6 +59,9 @@ function create_fragment(;coords_string=nothing,xyzfile=nothing,pdbfile=nothing,
     #fragment.list_of_masses=py_functions_coords.list_of_masses(elems)
     #fragment.nuccharge=py_functions_coords.nucchargelist(elems)
     fragment.numatoms=length(elems)
+
+    #Count element occurrences in list of elems
+    fragment.prettyformula=molecular_formula(elems)
     fragment.formula=join(elems)
 
     if label != nothing
@@ -154,4 +157,17 @@ function read_xyzfile(filename)
     @assert size(coords)[1] == length(elems) "Number of coordinates does not match elements."
     println("Read $numatoms atoms")
     return elems,coords
+end
+
+#Count element occurrences in list of elems
+function molecular_formula(elems)
+    eloccvector = [(i, count(==(i), elems)) for i in unique(elems)]
+    formula=""
+    for i in eloccvector
+        el=i[1]
+        num=i[2]
+        if num == 1; number=""; else; number=string(num) end
+        formula=formula*i[1]*number
+    end
+    return formula
 end

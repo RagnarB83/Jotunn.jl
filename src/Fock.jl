@@ -18,18 +18,6 @@ function choose_Fock(HFtype,fock_algorithm,dim,tei_type,printlevel)
     #end
     if HFtype == "RHF"
         if tei_type == "4c"
-
-            # Change macro 
-            #if fock4c_speedup =="turbo"
-            #    println("fock4c_speedup requires LoopVectorization library")
-            #    var"@speedup" = var"@turbo"
-            #elseif fock4c_speedup =="simd"
-            #    var"@speedup" = var"@simd"
-            #else
-            #    #Have nothing
-            #    var"@speedup" = var"@show"
-            #end
-
             if fock_algorithm == "loop" #fast for small systems
                 print_if_level("Using Fock_loop",1,printlevel)
                 Fock=Fock_loop_RHF
@@ -78,9 +66,6 @@ end
 Fock_loop_sparse: Multiple matrix-element update per unique set of indices
 """
 function Fock_loop_sparse_RHF(Hcore,P,dim,tei::Jint_sparse)
-
-    #- STILL NEED TO LOOK INTO CORRECTNESS
-    #- Are exchange terms definitely correct ??? Look at Xik things
     #- Next combine assignments into simpler ones
     G = zeros(dim,dim)
     #Looping over unique sets of indices and values from sparse2e4c

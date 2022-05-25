@@ -173,7 +173,7 @@ function print_final_results(energy,fragment,num_el,basisset,HFtype,fock_algorit
     println()
     print(Crayon(foreground = :green, bold = true), "FINAL RESULTS\n",Crayon(reset=true))
     labels=["Final HF energy","Molecule formula","Number of electrons","Basis set","HF type","Fock algorithm","SCF iterations"]
-    stuff=[energy,fragment.formula,string(num_el),basisset,HFtype,fock_algorithm,string(finaliter)]
+    stuff=[energy,fragment.prettyformula,string(num_el),basisset,HFtype,fock_algorithm,string(finaliter)]
     data=hcat(labels,stuff)
     pretty_table(data; crop=:none,  noheader = true,
         formatters = ft_printf("%14.8f", [2]),
