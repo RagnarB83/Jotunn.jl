@@ -16,7 +16,7 @@ using Molecules #FermiQC
 using GaussianBasis #FermiQC
 
 #Linear Algebra speed-up packages
-using LoopVectorization
+#using LoopVectorization
 #using TensorOperations
 #using Tullio
 
