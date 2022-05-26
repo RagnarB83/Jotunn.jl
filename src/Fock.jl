@@ -91,14 +91,14 @@ function Fock_loop_sparse_RHF(Hcore,P,dim,tei::Jint_sparse)
         #Now adding value to correct matrix element
         if γµν && γλσ && γxy
             #println("Case1: e.g. µ!=ν!=c!=d  and 1232 ")
-            G[µ,ν] += P[λ,σ]*value # J µνλσ
-            G[ν,µ] += P[λ,σ]*value # J νµλσ
-            G[µ,ν] += P[σ,λ]*value # J µνσλ
-            G[λ,σ] += P[µ,ν]*value # J λσµν
-            G[λ,σ] += P[ν,µ]*value # J λσνµ
-            G[ν,µ] += P[σ,λ]*value # J νµσλ
-            G[σ,λ] += P[ν,µ]*value # J σλνµ
-            G[σ,λ] += P[µ,ν]*value # J σλµν
+            G[µ,ν] += 2*P[λ,σ]*value # J µνλσ
+            G[ν,µ] += 2*P[λ,σ]*value # J νµλσ
+            #G[µ,ν] += P[σ,λ]*value # J µνσλ
+            G[λ,σ] += 2*P[µ,ν]*value # J λσµν
+            #G[λ,σ] += P[ν,µ]*value # J λσνµ
+            #G[ν,µ] += P[σ,λ]*value # J νµσλ
+            G[σ,λ] += 2*P[ν,µ]*value # J σλνµ
+            #G[σ,λ] += P[µ,ν]*value # J σλµν
 
             G[µ,λ] -= 0.5*P[ν,σ]*value # K   µνλσ
             G[ν,λ] -= 0.5*P[µ,σ]*value # K   νµλσ
@@ -111,8 +111,9 @@ function Fock_loop_sparse_RHF(Hcore,P,dim,tei::Jint_sparse)
 
         elseif γλσ && γxy
             #println("Case2")
-            G[µ,ν] += P[λ,σ]*value # J µνλσ
-            G[µ,ν] += P[σ,λ]*value # J µνσλ
+            G[µ,ν] += 2*P[λ,σ]*value # J µνλσ
+            #G[µ,ν] += P[σ,λ]*value # J µνσλ
+            #Strange diis+damp+levelshift fail here
             G[λ,σ] += P[µ,ν]*value # J λσµν
             G[σ,λ] += P[ν,µ]*value # J σλνµ
 
@@ -124,8 +125,8 @@ function Fock_loop_sparse_RHF(Hcore,P,dim,tei::Jint_sparse)
             #println("Case3 (incomplete)")
             G[µ,ν] += P[λ,σ]*value # J µνλσ
             G[ν,µ] += P[λ,σ]*value # J νµλσ
-            G[λ,σ] += P[µ,ν]*value # J λσµν
-            G[λ,σ] += P[ν,µ]*value # J λσνµ
+            G[λ,σ] += 2*P[µ,ν]*value # J λσµν
+            #G[λ,σ] += P[ν,µ]*value # J λσνµ
 
             G[µ,λ] -= 0.5*P[ν,σ]*value # K   µνλσ
             G[ν,λ] -= 0.5*P[µ,σ]*value # K   νµλσ
@@ -134,10 +135,10 @@ function Fock_loop_sparse_RHF(Hcore,P,dim,tei::Jint_sparse)
 
         elseif γµν && γλσ
             #println("Case4")
-            G[µ,ν] += P[λ,σ]*value # J µνλσ
-            G[ν,µ] += P[λ,σ]*value # J νµλσ
-            G[µ,ν] += P[σ,λ]*value # J µνσλ
-            G[ν,µ] += P[σ,λ]*value # J νµσλ
+            G[µ,ν] += 2*P[λ,σ]*value # J µνλσ
+            G[ν,µ] += 2*P[λ,σ]*value # J νµλσ
+            #G[µ,ν] += P[σ,λ]*value # J µνσλ
+            #G[ν,µ] += P[σ,λ]*value # J νµσλ
 
             G[µ,λ] -= 0.5*P[ν,σ]*value # K   µνλσ
             G[ν,λ] -= 0.5*P[µ,σ]*value # K   νµλσ

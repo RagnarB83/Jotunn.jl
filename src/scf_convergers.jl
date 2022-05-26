@@ -215,11 +215,15 @@ function FP_commutator(F,P,S,Sminhalf)
 end
 
 
-function check_for_convergence(deltaE,energythreshold,diisobj,diis_error_conv_threshold,iter,printlevel)
+function check_for_convergence(deltaE,energythreshold,FP_comm,diis_error_conv_threshold,iter,printlevel)
 
-    #Current behaviour: if either deltaE or MaxDIISerror condition is fulfilled, we signal convergence
-    if abs(deltaE) < energythreshold
+    #Current behaviour: if either deltaE or MaxDIISerror condition is fulfilled
+    #with reasonable thresholds on other, we signal convergence
+    
+    max_diis_error=maximum(FP_comm)
+    if abs(deltaE) < energythreshold && max_diis_error < diis_error_conv_threshold*10
         print_if_level("Energy convergence threshold reached: $(abs(deltaE)) < $energythreshold",1,printlevel)
+        #println("diisobj.max_diis_error: $diisobj.max_diis_error and diis_error_conv_threshold: $diis_error_conv_threshold ")
         if printlevel >= 1
             print(Crayon(foreground = :green, bold = true), 
                 "\n                              SCF converged in $iter iterations! Hell yeah! 🎉\n\n",
@@ -227,8 +231,8 @@ function check_for_convergence(deltaE,energythreshold,diisobj,diis_error_conv_th
         end
             return true
     #If DIIS error is converged and energy threshold off by 10
-    elseif diisobj.max_diis_error < diis_error_conv_threshold && abs(deltaE) < energythreshold*10
-        print_if_level("DIIS convergence threshold reached: $(diisobj.max_diis_error) < $diis_error_conv_threshold",1,printlevel)
+    elseif max_diis_error < diis_error_conv_threshold && abs(deltaE) < energythreshold*10
+        print_if_level("DIIS convergence threshold reached: $(max_diis_error) < $diis_error_conv_threshold",1,printlevel)
         if printlevel >= 1
             print(Crayon(foreground = :green, bold = true), 
                 "\n                              SCF converged in $iter iterations! Hell yeah! 🎉\n\n",

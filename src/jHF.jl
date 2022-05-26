@@ -256,7 +256,7 @@ function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="h
 
         #NOTE: UHF, only checking convergence for diisobj_⍺ !
         #TODO: Make more general
-        if check_for_convergence(deltaE,energythreshold,diisobj,diis_error_conv_threshold,iter,printlevel) == true
+        if check_for_convergence(deltaE,energythreshold,FP_comm,diis_error_conv_threshold,iter,printlevel) == true
             finaliter=iter
             if printlevel > 0
                 if HFtype == "RHF"

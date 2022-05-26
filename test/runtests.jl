@@ -6,4 +6,5 @@ using Test
     include("test_RHF_H2.jl")
     include("test_UHF_H2.jl")
     include("test_UHF_NO.jl")
+    include("test_RHF_H2O.jl")
 end

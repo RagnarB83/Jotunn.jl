@@ -8,8 +8,7 @@ and debug output (4)
 - Add geometry printout in beginning: printlevel=2 and higher
 
 FEATURES
-- Optimal damping algorithm (ODA)
-- EDIIS+DIIS
+- EDIIS+DIIS or Optimal damping algorithm (ODA)
 - Parallelization : threading
 - Write/read functionality for a wavefunction file. Use for guess="read" in jHF
   and also for standalone plot_MO/plot_density functions.
