@@ -292,8 +292,7 @@ create_bf_shell_map: Create array (dim:basis dim) of (atom, shell) tuples,
 i.e. what atom and shell each BF belong to
 """
 function create_bf_shell_map(bset)
-    bf_atom_shell_mapping=[]
-    #angmom_degen=Dict(0 => 1, 1=> 3, 2=> 5, 3=>7)
+    bf_atom_shell_mapping=Tuple{Int64, Int64}[]
     for atom_ind in 1:bset.natoms
         shells = bset[atom_ind]
         ind=0

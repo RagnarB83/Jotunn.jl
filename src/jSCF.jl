@@ -14,7 +14,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
     damping::Bool=true, damping_val::Float64=0.4, damping_thresh::Float64=0.01,
     diis::Bool=true, diis_size::Int64=5, diis_startiter::Int64=4, DIISBfac::Float64=1.05,
     diis_error_conv_threshold::Float64=5e-7, calc_density::Bool=false,
-    printlevel::Int64=1, fock4c_speedup::String="simd")
+    printlevel::Int64=1, fock4c_speedup::String="simd", nopop::Bool=false)
 
     #Timing whole function
     totaltime=@elapsed begin
@@ -120,7 +120,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
     SVAL_minhalf = Diagonal(Sval)^-0.5
     Stemp = SVAL_minhalf*transpose(Svec)
     S_minhalf = Svec * Stemp
-    print_if_level("Calculating 2-electron integrals (tei_type: $tei_type)",1,printlevel)
+    #print_if_level("Calculating 2-electron integrals (tei_type: $tei_type)",1,printlevel)
     #Calculating two-electron integrals: tei_type: 4c, sparse4c
     #
     time_tei=@elapsed tei = tei_calc(bset,tei_type,printlevel)
@@ -128,7 +128,9 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
 
     #Creating Integrals object (contains Hcore, TEI and basis set)
     if tei_type == "sparse4c"
-        integrals = Jint(Hcore=Hcore,unique_indices=[i .+ 1 for i in tei[1]],
+        #Note: Takes 0.10-0.13 s for C16 RHF/STO-3G
+        #due to list comprehension, speed up?
+        @time integrals = Jint(Hcore=Hcore,unique_indices=[i .+ 1 for i in tei[1]],
         values=tei[2], length=length(tei[2]),bset=bset,bset_atom_mapping=bset_atom_mapping,
         bf_atom_shell_map=bf_atom_shell_map)
     else
@@ -146,13 +148,16 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
     if calc_density == true grid=true end
     if grid == true
         println("Creating grid")
-        gridpoints,gridweights = numgrid_call("atomgrid",fragment,bset)
+        time_grid=@elapsed gridpoints,gridweights = numgrid_call("atomgrid",fragment,bset)
         println("Number of gridpoints: $(length(gridpoints))")
         println("Number of gridweights: $(length(gridweights))")
         #NOTE: Gridpoint coords are in Bohrs
         #Adding gridpoints to object
         integrals.gridpoints=gridpoints
         integrals.gridweights=gridweights
+        print_if_level("Time calculating grid: $time_grid",1,printlevel)
+    else
+        time_grid=0.0
     end
     #end
 
@@ -213,7 +218,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
 
     #SCF loop beginning
     if printlevel == 1 @printf("%4s%15s%16s%14s%14s%8s%8s%8s%10s\n", "Iter", "Energy", "deltaE", "RMS-DP", "Max-DP", "Lshift", "Damp", "DIIS", "Max[F,P]") end
-    
+
     time_scf=@elapsed for iter in 1:maxiter
         if printlevel > 1 print_iteration_header(iter) end
         if WFtype == "RHF" || WFtype=="RKS"
@@ -335,7 +340,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
     #################################################
     #SCF loop done. Calculate and print properties
     #ORBITALS AND POPULATION ANALYSIS
-    if printlevel > 0
+    if nopop == false
         if WFtype=="RHF" || WFtype=="RKS"
             if grid == true 
                 println("Now creating density")
@@ -381,9 +386,16 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
     #orbital energies, occupation numbers, WFtype, numelectrons
     Resultsdict=Dict("energy"=>energy,"finaliter"=>finaliter)
 
-    #TIMINGS: TODO
-end
-Resultsdict["time"]=totaltime
+    #TIMINGS: TODO properly
+    println("Timings:")
+    print_if_level("Time calculating 2-electron integrals: $time_tei",1,printlevel)
+    print_if_level("Time calculating SCF: $time_scf",1,printlevel)
+    print_if_level("Time calculating grid: $time_grid",1,printlevel)
+    all_times=[time_tei,time_scf,time_grid]
+    sum_of_all_times=sum(all_times)
+    println("Sum of all recorded times:", sum_of_all_times)
+end #end of timing block
+Resultsdict["time"]=totaltime #addint total time
     return Resultsdict
 end
 
@@ -409,7 +421,7 @@ Base.@kwdef mutable struct Jint
     #Basis set object and data
     bset::BasisSet
     bset_atom_mapping::Vector{Int64}
-    bf_atom_shell_map::Vector{Any}
+    bf_atom_shell_map::Vector{Tuple{Int64, Int64}}
     #Gridpoints (only used by DFT or density generation)
     gridpoints::Vector{Any}=[]
     gridweights::Vector{Any}=[]
@@ -426,7 +438,7 @@ Base.@kwdef mutable struct Jint_4rank
     #Basis set object and data
     bset::BasisSet
     bset_atom_mapping::Vector{Int64}
-    bf_atom_shell_map::Vector{Any}
+    bf_atom_shell_map::Vector{Tuple{Int64, Int64}}
     #Gridpoints (only used by DFT or density generation)
     gridpoints::Vector{Any}=[]
     gridweights::Vector{Any}=[]
