@@ -143,7 +143,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
     #############################
     #grid always true for RKS/UKS
     # Also turn-on grid for RHF/UHF if density is requested
-    if calc_density == true grid=true 
+    if calc_density == true grid=true end
     if grid == true
         println("Creating grid")
         gridpoints,gridweights = numgrid_call("atomgrid",fragment,bset)
