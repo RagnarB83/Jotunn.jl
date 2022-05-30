@@ -1,5 +1,3 @@
-using PyCall
-
 #Interface to Numgrid: a Rust library with Python API
 #TODO: Call Rust library directly via C-Interface
 #Write separate Julia Interface
