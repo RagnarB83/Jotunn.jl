@@ -10,5 +10,5 @@ basisname="def2-tzvpp"
 maxiter=50
 
 #Comparing DIIS with different startup times
-    @time result = jHF(Acetic, basisname; maxiter=maxiter, HFtype="RHF",
+    @time result = jSCF(Acetic, basisname; maxiter=maxiter, WFtype="RHF",
         diis=true, diis_startiter=4, levelshift=false, damping=false,printlevel=1)

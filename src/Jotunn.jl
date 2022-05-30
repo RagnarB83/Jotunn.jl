@@ -23,16 +23,18 @@ using GaussianBasis #FermiQC
 
 #Source-code files
 include("fragment.jl")
-include("jHF.jl")
+include("jSCF.jl")
 include("Fock.jl")
-include("basis_sets_and_integrals.jl")
+
 include("scf_convergers.jl")
+include("basis_sets_and_integrals.jl")
 include("mol_properties.jl")
 include("pop_ana.jl")
 include("printing.jl")
 include("tools.jl")
+include("num_integration.jl")
 
 #Export the callable functions of Jotunn
-export jHF, create_fragment
+export jSCF, create_fragment
 
 end

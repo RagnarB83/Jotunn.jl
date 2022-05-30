@@ -24,12 +24,12 @@ Resultdict=Dict{String,Vector{Any}}()
 
 #Compilation
 println("Running compilation calc first") 
-@time jHF(molecules[1], basis; printlevel=0,diis=true, damping=true, maxiter=200, HFtype=WFmethod)
+@time jSCF(molecules[1], basis; printlevel=0,diis=true, damping=true, maxiter=200, WFtype=WFmethod)
 #Looping over 
 println("Now running benchmark set")
 for mol in molecules
     println("NOW RUNNING molecule :", mol.prettyformula)
-    @time res = jHF(mol, basis; printlevel=0, diis=true, damping=true, maxiter=200, HFtype=WFmethod)
+    @time res = jSCF(mol, basis; printlevel=0, diis=true, damping=true, maxiter=200, WFtype=WFmethod)
     Resultdict[mol.prettyformula] = [res["finaliter"],res["time"],mol.formula]
 end
 

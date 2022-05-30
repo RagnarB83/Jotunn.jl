@@ -1,0 +1,54 @@
+ERROR: LoadError: UndefVarError: jHF not defined
+Stacktrace:
+ [1] top-level scope
+   @ ./timing.jl:242
+in expression starting at /Users/rb269145/Jotunn-DEV/Jotunn/benchmarking/n-alkanes/run-alkanes.jl:27
+Reading coordinates from XYZ-file ./xyzfiles/a1.xyz 
+Read 5 atoms
+Creating fragment
+Reading coordinates from XYZ-file ./xyzfiles/a2.xyz 
+Read 8 atoms
+Creating fragment
+Reading coordinates from XYZ-file ./xyzfiles/a3.xyz 
+Read 11 atoms
+Creating fragment
+Reading coordinates from XYZ-file ./xyzfiles/a4.xyz 
+Read 14 atoms
+Creating fragment
+Reading coordinates from XYZ-file ./xyzfiles/a5.xyz 
+Read 17 atoms
+Creating fragment
+Reading coordinates from XYZ-file ./xyzfiles/a6.xyz 
+Read 20 atoms
+Creating fragment
+Reading coordinates from XYZ-file ./xyzfiles/a7.xyz 
+Read 23 atoms
+Creating fragment
+Reading coordinates from XYZ-file ./xyzfiles/a8.xyz 
+Read 26 atoms
+Creating fragment
+Reading coordinates from XYZ-file ./xyzfiles/a9.xyz 
+Read 29 atoms
+Creating fragment
+Reading coordinates from XYZ-file ./xyzfiles/a10.xyz 
+Read 32 atoms
+Creating fragment
+Reading coordinates from XYZ-file ./xyzfiles/a11.xyz 
+Read 35 atoms
+Creating fragment
+Reading coordinates from XYZ-file ./xyzfiles/a12.xyz 
+Read 38 atoms
+Creating fragment
+Reading coordinates from XYZ-file ./xyzfiles/a13.xyz 
+Read 41 atoms
+Creating fragment
+Reading coordinates from XYZ-file ./xyzfiles/a14.xyz 
+Read 44 atoms
+Creating fragment
+Reading coordinates from XYZ-file ./xyzfiles/a15.xyz 
+Read 47 atoms
+Creating fragment
+Reading coordinates from XYZ-file ./xyzfiles/a16.xyz 
+Read 50 atoms
+Creating fragment
+Running compilation calc first

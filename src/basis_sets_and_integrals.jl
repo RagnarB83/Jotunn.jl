@@ -6,21 +6,20 @@ function tei_calc(bset,tei_type,printlevel)
     if tei_type == "4c"
         #Full 4-rank  tensor (1-based indexing already used here)
         #TODO: Create Jint object instead ??
-        integrals = ERI_2e4c(bset)
+        return ERI_2e4c(bset)
     elseif tei_type == "sparse4c"
         #Sparse form. Only unique sets of indices and integral values
         sparseintegrals = sparseERI_2e4c(bset)
         print_if_level("Sparse integral calculation done.",1,printlevel)
-        integrals = Jint_sparse([i .+ 1 for i in sparseintegrals[1]],sparseintegrals[2],length(sparseintegrals[2]))
-
+        return sparseintegrals
     elseif tei_type == "3c"
         #3c version. Requires auxiliary basis set
         #TODO: Create Jint object instead ??
-        integrals = ERI_2e3c(bset, aux)
+        return ERI_2e3c(bset, aux)
     elseif tei_type == "2c"
         #2c version
         #TODO: Create Jint object instead ??
-        integrals = ERI_2e2c(bset)
+        return ERI_2e2c(bset)
     end
     return integrals
 end
@@ -274,6 +273,7 @@ end
 """
 bf_atom_mapping: Created simply array (size of basis-set dimension) of atom indices in basis-function order.
 i.e. map of which basis-function belongs to which atom
+TODO: Get rid of ?? Since create_bf_shell_map contains same info??
 """
 function bf_atom_mapping(bset)
     mapping=Int64[]
@@ -287,7 +287,30 @@ function bf_atom_mapping(bset)
 end
 
 
-
+"""
+create_bf_shell_map: Create array (dim:basis dim) of (atom, shell) tuples,
+i.e. what atom and shell each BF belong to
+"""
+function create_bf_shell_map(bset)
+    bf_atom_shell_mapping=[]
+    #angmom_degen=Dict(0 => 1, 1=> 3, 2=> 5, 3=>7)
+    for atom_ind in 1:bset.natoms
+        shells = bset[atom_ind]
+        ind=0
+        for shell in shells
+            angmom=shell.l
+            #degen=angmom_degen[angmom]
+            degen=2*angmom+1
+            ind+=1
+            for i in 1:degen
+                tup=(atom_ind,ind)
+                push!(bf_atom_shell_mapping,tup)
+            end
+            
+        end
+    end
+    return bf_atom_shell_mapping
+end
 
 
 

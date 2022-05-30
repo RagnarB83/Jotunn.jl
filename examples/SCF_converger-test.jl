@@ -18,7 +18,7 @@ damping_val=0.4
 results=[]
 fixed_damping_thresh=0.001
 for VAL in damping_values
-    result= jHF(Acetic, "sto-3g"; HFtype="UHF", damping=true, levelshift=false, damping_val=VAL, damping_thresh=fixed_damping_thresh, maxiter=600)
+    result= jSCF(Acetic, "sto-3g"; WFtype="UHF", damping=true, levelshift=false, damping_val=VAL, damping_thresh=fixed_damping_thresh, maxiter=600)
     finaliter=result["finaliter"]
     finalenergy=result["energy"]
     push!(results,"Damping value: $VAL . Iterations: $finaliter Energy: $finalenergy")
@@ -35,7 +35,7 @@ end
 results=[]
 fixed_damping_val=0.2
 for VAL in damping_thresh_values
-    result= jHF(Acetic, "sto-3g"; HFtype="UHF", damping=true, levelshift=false, damping_val=fixed_damping_val, damping_thresh=VAL, maxiter=600)
+    result= jSCF(Acetic, "sto-3g"; WFtype="UHF", damping=true, levelshift=false, damping_val=fixed_damping_val, damping_thresh=VAL, maxiter=600)
     finaliter=result["finaliter"]
     finalenergy=result["energy"]
     push!(results,"Damping thresh: $VAL . Iterations: $finaliter Energy: $finalenergy")
@@ -53,7 +53,7 @@ end
 results=[]
 fixed_lshift_thresh=0.001
 for VAL in lshift_values
-    result= jHF(Acetic, "sto-3g"; HFtype="UHF", damping=false, levelshift=true, lshift_thresh=fixed_lshift_thresh, levelshift_val=VAL, maxiter=600)
+    result= jSCF(Acetic, "sto-3g"; WFtype="UHF", damping=false, levelshift=true, lshift_thresh=fixed_lshift_thresh, levelshift_val=VAL, maxiter=600)
     finaliter=result["finaliter"]
     finalenergy=result["energy"]
     push!(results,"Levelshift value: $VAL . Iterations: $finaliter Energy: $finalenergy")
@@ -70,7 +70,7 @@ end
 results=[]
 fixed_levelshift_val=0.4
 for VAL in lshift_thresh_values
-    result= jHF(Acetic, "sto-3g"; HFtype="UHF", damping=false, levelshift=true, levelshift_val=fixed_levelshift_val, lshift_thresh=VAL, maxiter=600)
+    result= jSCF(Acetic, "sto-3g"; WFtype="UHF", damping=false, levelshift=true, levelshift_val=fixed_levelshift_val, lshift_thresh=VAL, maxiter=600)
     finaliter=result["finaliter"]
     finalenergy=result["energy"]
     push!(results,"Levelshift thresh: $VAL . Iterations: $finaliter Energy: $finalenergy")

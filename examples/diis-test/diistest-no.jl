@@ -11,8 +11,8 @@ basisname="sto-3g"
 maxiter=260
 
 #No DIIS
-@time result= jHF(NO, basisname; HFtype="UHF", levelshift=true, maxiter=200, tei_type="sparse4c")
+@time result= jSCF(NO, basisname; WFtype="UHF", levelshift=true, maxiter=200, tei_type="sparse4c")
 
 #Comparing DIIS with different startup times
-    @time result = jHF(NO, basisname; maxiter=maxiter, HFtype="UHF",
+    @time result = jSCF(NO, basisname; maxiter=maxiter, WFtype="UHF",
         diis=true, diis_startiter=2, diis_size=5, levelshift=true, damping=true,printlevel=1)

@@ -10,25 +10,25 @@ basisname="def2-svp"
 maxiter=100
 
 #Comparing DIIS with different startup times
-#@time res_damp_diis1= jHF(Acetic, basisname; maxiter=maxiter, HFtype="RHF",
+#@time res_damp_diis1= jSCF(Acetic, basisname; maxiter=maxiter, WFtype="RHF",
 #    diis=true, diis_startiter=1, levelshift=false, damping=false,printlevel=1)
-@time res_damp_diis2= jHF(Acetic, basisname; maxiter=maxiter, HFtype="RHF",
+@time res_damp_diis2= jSCF(Acetic, basisname; maxiter=maxiter, WFtype="RHF",
     diis=true, diis_startiter=2, levelshift=false, damping=false,printlevel=1)
-@time res_damp_diis3= jHF(Acetic, basisname; maxiter=maxiter, HFtype="RHF",
+@time res_damp_diis3= jSCF(Acetic, basisname; maxiter=maxiter, WFtype="RHF",
     diis=true, diis_startiter=3, levelshift=false, damping=false,printlevel=1)
-@time res_damp_diis4= jHF(Acetic, basisname; maxiter=maxiter, HFtype="RHF",
+@time res_damp_diis4= jSCF(Acetic, basisname; maxiter=maxiter, WFtype="RHF",
     diis=true, diis_startiter=4, levelshift=false, damping=false,printlevel=1)
-@time res_damp_diis5= jHF(Acetic, basisname; maxiter=maxiter, HFtype="RHF",
+@time res_damp_diis5= jSCF(Acetic, basisname; maxiter=maxiter, WFtype="RHF",
     diis=true, diis_startiter=5, levelshift=false, damping=false,printlevel=1)
-@time res_damp_diis6= jHF(Acetic, basisname; maxiter=maxiter, HFtype="RHF",
+@time res_damp_diis6= jSCF(Acetic, basisname; maxiter=maxiter, WFtype="RHF",
     diis=true, diis_startiter=6, levelshift=false, damping=false,printlevel=1)
-@time res_damp_diis8= jHF(Acetic, basisname; maxiter=maxiter, HFtype="RHF",
+@time res_damp_diis8= jSCF(Acetic, basisname; maxiter=maxiter, WFtype="RHF",
     diis=true, diis_startiter=8, levelshift=false, damping=false,printlevel=1)
-@time res_damp_diis10= jHF(Acetic, basisname; maxiter=maxiter, HFtype="RHF",
+@time res_damp_diis10= jSCF(Acetic, basisname; maxiter=maxiter, WFtype="RHF",
     diis=true, diis_startiter=10, levelshift=false, damping=false,printlevel=1)
-@time res_damp_diis12= jHF(Acetic, basisname; maxiter=maxiter, HFtype="RHF",
+@time res_damp_diis12= jSCF(Acetic, basisname; maxiter=maxiter, WFtype="RHF",
     diis=true, diis_startiter=12, levelshift=false, damping=false,printlevel=1)
-@time res_damp_diis16= jHF(Acetic, basisname; maxiter=maxiter, HFtype="RHF",
+@time res_damp_diis16= jSCF(Acetic, basisname; maxiter=maxiter, WFtype="RHF",
     diis=true, diis_startiter=16, levelshift=false, damping=false,printlevel=1)
 
 

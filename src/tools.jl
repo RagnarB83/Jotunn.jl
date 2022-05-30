@@ -35,10 +35,10 @@ function nuc_nuc_repulsion(elems,coords)
 end
 
 """
-makedensity: Calculate density matrix P from MO coefficient matrix C
+makeP: Calculate density matrix P from MO coefficient matrix C
 Scaling: 2.0 for RHF, 1.0 for UHF
 """
-function makedensity(C, dim, Norb,scaling=2.0)
+function makeP(C, dim, Norb,scaling=2.0)
     P=zeros(dim,dim)
     for µ in 1:dim
         for ν in 1:dim
@@ -124,4 +124,21 @@ function plot_density(P,bset,C; box_size=[-5,5], grid_size=100)
     end
 
 
+end
+
+#using Plots
+function plot_Gaussian()
+	⍺=4.0
+
+	x=range(-10,stop=10,length=100)
+	y=range(-10,stop=10,length=100)
+	f(x,y) = exp(-⍺*(x^2+y^2))
+    #Backend: gr (default), pyplot, plotly, plotlyjs, pgfplotsx
+    #pyplot()
+	plot(x,y,f, st=:surface,camera=(-30,30))
+
+    #surface(
+    #x, x, (x, y)->f(x,y), c=:viridis, legend=:none,
+    #nx=50, ny=50, display_option=Plots.GR.OPTION_SHADED_MESH,  # <-- series[:extra_kwargs]
+    #)
 end

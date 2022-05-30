@@ -13,7 +13,7 @@ maxiter=100
 values=[2,4,6,8,10,12,14,16,18,20,22]
 Resultdict_Damp_DIIS=Dict{String,Vector{Any}}()
 for val in values
-    @time result = jHF(Acetic, basisname; maxiter=maxiter, HFtype="RHF",
+    @time result = jSCF(Acetic, basisname; maxiter=maxiter, WFtype="RHF",
         diis=true, diis_startiter=val, levelshift=false, damping=true,printlevel=1)
         println("Resultdict_Damp_DIIS:", Resultdict_Damp_DIIS)
         println("result:", result)
@@ -24,7 +24,7 @@ end
 values=[2,4,6,8,10,12,14,16,18,20,22]
 Resultdict_DIIS=Dict{String,Vector{Float64}}()
 for val in values
-    @time result = jHF(Acetic, basisname; maxiter=maxiter, HFtype="RHF",
+    @time result = jSCF(Acetic, basisname; maxiter=maxiter, WFtype="RHF",
         diis=true, diis_startiter=val, levelshift=false, damping=false,printlevel=1)
         Resultdict_DIIS["DIIS"*string(val)] = [result["energy"],result["finaliter"]]
 end

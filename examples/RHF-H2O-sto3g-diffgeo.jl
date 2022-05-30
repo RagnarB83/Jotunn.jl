@@ -5,5 +5,5 @@ using BenchmarkTools
 H2O = create_fragment(xyzfile="h2o_diffgeo.xyz", charge=0, mult=1)
 
 #More options and more printing
-energy= jHF(H2O, "sto-3g"; maxiter=200, diis=true, levelshift=false, damping=false, 
-    fock_algorithm="loop", HFtype="RHF", printlevel=2)
+energy= jSCF(H2O, "sto-3g"; maxiter=200, diis=true, levelshift=false, damping=false, 
+    fock_algorithm="loop", WFtype="RHF", printlevel=2)

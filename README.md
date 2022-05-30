@@ -72,10 +72,10 @@ function create_fragment(;coords_string=nothing,xyzfile=nothing,pdbfile=nothing,
     elems=nothing, calc_connectivity=false, label=nothing, charge=nothing, mult=nothing)
 ```
 
-**jHF** (a function to run the Jotunn RHF/UHF code).
+**jSCF** (a function to run the Jotunn RHF/UHF code).
 
 ```julia
-function jHF(fragment, basisset="sto-3g"; HFtype::String="RHF", guess::String="hcore", basisfile::String="none", maxiter::Int64=120, 
+function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", guess::String="hcore", basisfile::String="none", maxiter::Int64=120, 
     print_final_matrices::Bool=false, rmsDP_threshold::Float64=5e-9, maxDP_threshold::Float64=1e-7, tei_type::String="sparse4c",
     energythreshold::Float64=1e-8, debugprint::Bool=false, fock_algorithm::String="loop", 
     levelshift::Bool=false, levelshift_val::Float64=0.10, lshift_thresh::Float64=0.01,
@@ -92,14 +92,14 @@ Launch an interactive julia session:*
 julia
 ```
 
-Then within Julia REPL, import Jotunn, create a molecule fragment and call jHF :
+Then within Julia REPL, import Jotunn, create a molecule fragment and call jSCF :
 ```julia
 using Jotunn
 H2 = create_fragment(coords_string="""
 H 0.0 0.0 0.0
 H 0.0 0.0 0.74
 """, charge=0, mult=1)
-jHF(H2, "sto-3g")
+jSCF(H2, "sto-3g")
 ```
 
 
@@ -137,7 +137,7 @@ H 0.0 0.0 0.74
 """, charge=0, mult=1)
 
 #Simple call
-result= jHF(H2, "sto-3g")
+result= jSCF(H2, "sto-3g")
 println("Result dictionary from Jotunn: $result")
 println("Energy: $(result["energy"]) Eh")
  ```
@@ -147,8 +147,8 @@ using Jotunn
 H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
 
 #More keywords
-result= jHF(H2O, "sto-3g"; maxiter=200, fock_algorithm="turbo", printlevel=2,
-    HFtype="RHF", levelshift=2.0, lshift_thresh=1e-4, tei_type="4c", 
+result= jSCF(H2O, "sto-3g"; maxiter=200, fock_algorithm="turbo", printlevel=2,
+    WFtype="RHF", levelshift=2.0, lshift_thresh=1e-4, tei_type="4c", 
     print_final_matrices=true, debugprint=true)
  ```
 
@@ -157,7 +157,7 @@ result= jHF(H2O, "sto-3g"; maxiter=200, fock_algorithm="turbo", printlevel=2,
 using Jotunn
 H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
 #All features
-result = jHF(H2O, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile="none", maxiter=120, 
+result = jSCF(H2O, basisset="STO-3G"; WFtype="RHF", guess="hcore", basisfile="none", maxiter=120, 
     print_final_matrices=false, rmsDP_threshold=5e-9, maxDP_threshold=1e-7, tei_type="4c",
     energythreshold=1e-8, debugprint=false, fock_algorithm="turbo", 
     levelshift=false, levelshift_val=0.10, lshift_thresh=0.01,
@@ -175,7 +175,7 @@ result = jHF(H2O, basisset="STO-3G"; HFtype="RHF", guess="hcore", basisfile="non
 a simple quantum chemistry program in Julia
 ==================================================
 
-jHF module: a RHF/UHF program
+jSCF module: a RHF/UHF program
 
 SYSTEM
 ========================= =================

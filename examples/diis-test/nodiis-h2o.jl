@@ -10,5 +10,5 @@ basisname="sto-3g"
 maxiter=12
 
 #Comparing DIIS with different startup times
-    @time result = jHF(H2O, basisname; maxiter=maxiter, HFtype="RHF",
+    @time result = jSCF(H2O, basisname; maxiter=maxiter, WFtype="RHF",
         diis=false, levelshift=false, damping=false,printlevel=1)

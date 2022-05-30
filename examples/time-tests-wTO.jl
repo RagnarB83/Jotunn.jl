@@ -15,28 +15,28 @@ basis="def2-tzvpp"
 repeat=5
 
 #4c-loop
-#@timeit to "jHF(compile_4cloop)" result_4c=jHF(mol, basis; maxiter=200, fock_algorithm="loop", HFtype="RHF", tei_type="4c")
+#@timeit to "jSCF(compile_4cloop)" result_4c=jSCF(mol, basis; maxiter=200, fock_algorithm="loop", WFtype="RHF", tei_type="4c")
 #for i in 1:repeat
-#    @timeit to "jHF(4cloop)" jHF(H2O, basis; maxiter=200, fock_algorithm="loop", HFtype="RHF", tei_type="4c")
+#    @timeit to "jSCF(4cloop)" jSCF(H2O, basis; maxiter=200, fock_algorithm="loop", WFtype="RHF", tei_type="4c")
 #end
 
 #4c-turbo
-#@timeit to "jHF(compile_4cturbo)" result_4ct=jHF(mol, basis; maxiter=200, fock_algorithm="turbo", HFtype="RHF", tei_type="4c")
+#@timeit to "jSCF(compile_4cturbo)" result_4ct=jSCF(mol, basis; maxiter=200, fock_algorithm="turbo", WFtype="RHF", tei_type="4c")
 #for i in 1:repeat
-#    @timeit to "jHF(4cturbo)" jHF(H2O, basis; maxiter=200, fock_algorithm="turbo", HFtype="RHF", tei_type="4c")
+#    @timeit to "jSCF(4cturbo)" jSCF(H2O, basis; maxiter=200, fock_algorithm="turbo", WFtype="RHF", tei_type="4c")
 #end
 
 
 #sp-loop bad
-#@timeit to "jHF(compile_sp_old)" result_sp_old=jHF(mol, basis; maxiter=200, fock_algorithm="loop", HFtype="RHF", tei_type="sparse4c")
+#@timeit to "jSCF(compile_sp_old)" result_sp_old=jSCF(mol, basis; maxiter=200, fock_algorithm="loop", WFtype="RHF", tei_type="sparse4c")
 #for i in 1:repeat
-#    @timeit to "jHF(sp1)" jHF(H2O, basis; maxiter=200, fock_algorithm="loop", HFtype="RHF", tei_type="sparse4c")
+#    @timeit to "jSCF(sp1)" jSCF(H2O, basis; maxiter=200, fock_algorithm="loop", WFtype="RHF", tei_type="sparse4c")
 #end
 
 #sp-loop good
-@timeit to "jHF(compile_sp)" result_sp=jHF(mol, basis; maxiter=200, fock_algorithm="loop", HFtype="RHF", tei_type="sparse4c")
+@timeit to "jSCF(compile_sp)" result_sp=jSCF(mol, basis; maxiter=200, fock_algorithm="loop", WFtype="RHF", tei_type="sparse4c")
 for i in 1:repeat
-    @timeit to "jHF(sp)" jHF(H2O, basis; maxiter=200, fock_algorithm="loop", HFtype="RHF", tei_type="sparse4c")
+    @timeit to "jSCF(sp)" jSCF(H2O, basis; maxiter=200, fock_algorithm="loop", WFtype="RHF", tei_type="sparse4c")
 end
 
 #println("Energy (4c): $(result_4c["energy"])")

@@ -1,4 +1,21 @@
 """
+JDIIS: Jotunn DIIS struct
+"""
+Base.@kwdef mutable struct JDIIS
+    #Settings
+    active::Bool #whether DIIS method is used in this job
+    diis_size::Int64=5
+    diis_startiter::Int64=2
+    DIISBfac::Float64=1.05
+    #Data
+    diis_flag::Bool=false #whether DIIS is active in this iteration
+    errorvectors::Vector{Matrix{Float64}}=[]
+    max_diis_error::Float64=999999
+    Fockmatrices::Vector{Matrix{Float64}}=[]
+    energies::Vector{Float64}=[]
+end
+
+"""
 compute_core_guess: Compute MO coefficients from F=Hcore
 """
 function compute_core_guess(Hcore,S_minhalf)

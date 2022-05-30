@@ -14,5 +14,5 @@ H       -1.328922301     -1.415897278     -1.547206005
 basisname="sto-3g"
 maxiter=60
 
-    @time result = jHF(H2O_cation, basisname; maxiter=maxiter, HFtype="UHF",
+    @time result = jSCF(H2O_cation, basisname; maxiter=maxiter, WFtype="UHF",
         diis=true, diis_startiter=4, diis_size=5, levelshift=false, damping=true,printlevel=1)

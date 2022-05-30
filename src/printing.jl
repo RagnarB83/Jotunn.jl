@@ -60,7 +60,7 @@ function print_program_header(printlevel)
         print(Crayon(foreground = :blue, bold = true), "                   JOTUNN\n",Crayon(reset=true))
         print(Crayon(foreground = :white, bold = false), "a simple quantum chemistry program in Julia\n",Crayon(reset=true))
         print(Crayon(foreground = :white, bold = true), "="^50*"\n",Crayon(reset=true))
-        print(Crayon(foreground = :yellow, bold = true), "\njHF: a RHF/UHF program\n",Crayon(reset=true))
+        print(Crayon(foreground = :yellow, bold = true), "\njSCF: a RHF/UHF program\n",Crayon(reset=true))
     end
 end
 
@@ -81,12 +81,12 @@ end
 """
 print_calculation_setup: Print calculation setup
 """
-function print_calculation_settings(HFtype,basisset,dim,guess,tei_type,fock_algorithm,lowest_S_eigenval,
+function print_calculation_settings(WFtype,basisset,dim,guess,tei_type,fock_algorithm,lowest_S_eigenval,
         levelshift,levelshift_val,lshift_thresh,damping,damping_val,damping_thresh,diis,diis_size,diis_startiter)
-    labels=["HF type", "Basis set","No. basis functions","Guess", "2-electron type","Fock algorithm","S lowest eigenvalue", 
+    labels=["WF type", "Basis set","No. basis functions","Guess", "2-electron type","Fock algorithm","S lowest eigenvalue", 
     "Levelshift", "Levelshift parameter", "Lshift-turnoff thresh.","Damping","Damping parameter", "Damp-turnoff thresh.",
     "DIIS","DIIS vec size","DIIS start iter."]
-    stuff=[HFtype,basisset,string(dim),guess,tei_type,fock_algorithm,lowest_S_eigenval,
+    stuff=[WFtype,basisset,string(dim),guess,tei_type,fock_algorithm,lowest_S_eigenval,
         string(levelshift),levelshift_val,lshift_thresh,
         string(damping),damping_val,damping_thresh,string(diis),string(diis_size),string(diis_startiter)]
     data=hcat(labels,stuff)
@@ -170,11 +170,11 @@ end
 """
 print_final_results: Print final results table in the end of job
 """
-function print_final_results(energy,fragment,num_el,basisset,HFtype,fock_algorithm,finaliter)
+function print_final_results(energy,fragment,num_el,basisset,WFtype,fock_algorithm,finaliter)
     println()
     print(Crayon(foreground = :green, bold = true), "FINAL RESULTS\n",Crayon(reset=true))
-    labels=["Final HF energy","Molecule formula","Number of electrons","Basis set","HF type","Fock algorithm","SCF iterations"]
-    stuff=[energy,fragment.prettyformula,string(num_el),basisset,HFtype,fock_algorithm,string(finaliter)]
+    labels=["Final HF energy","Molecule formula","Number of electrons","Basis set","WF type","Fock algorithm","SCF iterations"]
+    stuff=[energy,fragment.prettyformula,string(num_el),basisset,WFtype,fock_algorithm,string(finaliter)]
     data=hcat(labels,stuff)
     pretty_table(data; crop=:none,  noheader = true,
         formatters = ft_printf("%14.8f", [2]),
