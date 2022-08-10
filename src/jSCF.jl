@@ -3,6 +3,7 @@ export jSCF
 
 """
 jSCF: the Jotunn SCF program (RHF,UHF,RKS,UKS)
+
 """
 function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", 
     functional::String="none", libxc_keyword::String="none", manual_func::String="none",
