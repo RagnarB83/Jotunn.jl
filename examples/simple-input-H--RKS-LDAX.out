@@ -1,0 +1,16 @@
+ERROR: LoadError: BoundsError: attempt to access 0-element Vector{Int64} at index [1]
+Stacktrace:
+ [1] getindex(A::Vector{Int64}, i1::Int64)
+   @ Base ./array.jl:924
+ [2] (::Jotunn.var"#3#5")(i::String)
+   @ Jotunn ./none:0
+ [3] iterate
+   @ ./generator.jl:47 [inlined]
+ [4] collect(itr::Base.Generator{Vector{Any}, Jotunn.var"#3#5"})
+   @ Base ./array.jl:787
+ [5] create_fragment(; coords_string::String, xyzfile::Nothing, pdbfile::Nothing, fragfile::Nothing, coords::Nothing, elems::Nothing, calc_connectivity::Bool, label::Nothing, charge::Int64, mult::Int64)
+   @ Jotunn ~/Jotunn-DEV/Jotunn/src/fragment.jl:74
+ [6] top-level scope
+   @ ~/Jotunn-DEV/Jotunn/examples/simple-input-H--RKS-LDAX.jl:2
+in expression starting at /Users/rb269145/Jotunn-DEV/Jotunn/examples/simple-input-H--RKS-LDAX.jl:2
+Creating fragment

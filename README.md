@@ -1,50 +1,65 @@
 # Jotunn: a simple quantum chemistry program in Julia
-RHF/UHF code written in in Julia (with integrals provided by libcint via GaussianBasis.jl). 
-Primarily written to to be a simple, but general and easy-to-understand RHF/UHF code without being horribly slow.
-Might one day turn into something useful.
+RHF/UHF code written in in Julia (with integrals provided by the excellent libcint library and GaussianBasis.jl package). 
+Primarily written to to be a simple, but general and easy-to-understand RHF/UHF code without being horribly slow. For now, a conventional in-core algorithm is used (i.e. all integrals in memory), making the code limited to ~200 basis functions.
 
 
 ## Current features
-- 1 and 2-electron integrals via [GaussianBasis.jl](https://github.com/FermiQC/GaussianBasis.jl) and [libcint](https://github.com/sunqm/libcint).
-- Conventional RHF and UHF algorithm using 2-el integrals as full rank-4 tensor (4c) or sparse version (sparse4c)
-- Fock matrix speedup (4c) via [LoopVectorization.jl](https://github.com/JuliaSIMD/LoopVectorization.jl)
-- Mulliken population analysis (RHF and UHF)
-- Mayer bond orders (RHF and UHF)
+- 1 and 2-electron integrals and basis function handling via [GaussianBasis.jl](https://github.com/FermiQC/GaussianBasis.jl) and [libcint](https://github.com/sunqm/libcint).
+- Conventional RHF and UHF algorithm using 2-el integrals as sparse version (sparse4c) or full rank-4 tensor (4c).
 - SCF convergence aids: DIIS, levelshifting, static damping
 - Basis sets:
     - Support for all internal basis sets in [GaussianBasis.jl](https://github.com/FermiQC/GaussianBasis.jl).
     - Support for reading in external basis set in ORCA format.
+- Mulliken population analysis (RHF and UHF)
+- Mayer bond orders (RHF and UHF)
+
 
 ## Development: features to be added
-- Improving speed: 
-    - Further fine-tuning of Fock code for sparse 2el-integral version.
-    - Density fitting
+- Improving speed and system size limitations: 
+    - Thread parallelization of Fock
+    - Density fitting (RIJK)
+    - direct SCF algorithm ?
 - Improving SCF convergence:
-    - Dynamic damping 
+    - Dynamic damping or optimal damping ?
+    - EDIIS?
     - Better guess than Hcore
+- Input options:
+    - Read in previously calculated guess-orbitals
+    - Read in orbitals from another source (Molden, MKL ?)
+    - Interface to other MO/density packages ?
+    - Read-in basis set: Normalize contraction coefficients. Code currently assumes normalization.
+- Output and visualization
+    - density integration
+    - Cube-file generation of MOs and density/spindensity
+    - 3d plot of orbitals/density via Plots or Makie
 - DFT support:
     - interface to LibXC
     - DFT grids
     - hybrid-DFT
 - Support broken-symmetry guess
-- Simple electric properties (dipole, EFG)
 - Hirshfeld population analysis
-- Direct SCF algorithm ?
-- Noncollinear HF/DFT
-- Read-in basis set: Normalize contraction coefficients. Code currently assumes normalization.
+- Simple electric properties (dipole, EFG) ?
+- Noncollinear HF/DFT ?
+
 
 ## Dependencies (not in Julia standard library)
+
+Note: Julia version 1.6 or higher is required
+
 - [GaussianBasis.jl](https://github.com/FermiQC/GaussianBasis.jl) (1 and 2-electron integrals)
 - [Molecules.jl](https://github.com/FermiQC/Molecules.jl) (helper program with GaussianBasis.jl)
-- [LoopVectorization.jl](https://github.com/JuliaSIMD/LoopVectorization.jl) (only to speed up Fock when using full 4-rank TEIs )
 - [PrettyTables.jl](https://github.com/ronisbr/PrettyTables.jl) (pretty output)
 - [Crayons.jl](https://github.com/KristofferC/Crayons.jl) (pretty output)
-
+- [PyCall.jl](https://github.com/JuliaPy/PyCall.jl) (interface to Python, for NumGrid)
+- [Numgrid](https://github.com/dftlibs/numgrid) (numerical grid library in Rust via Python API)
+- [Libxc.jl](https://github.com/JuliaMolSim/Libxc.jl) (Julia wrapper around LibXC, xc-integral evaluation)
 
 ## Documentation:
 
 
 ### How to install:
+
+Note: Julia version 1.6 or higher is required.
 
 *Option 1. Manual setup:*
 
@@ -54,7 +69,7 @@ export JULIA_LOAD_PATH=/path/to/Jotunn/src:$JULIA_LOAD_PATH
 #copy-paste in Unix shell to make Jotunn package available to Julia
 ```
 
-*Option 2. Install package:*
+*Option 2. Install package via Julia Pkg manager (recommended):*
 
 Launch a Julia session and copy-paste the line below into Julia REPL. This will install Jotunn as a Julia package:
 ```julia
@@ -75,13 +90,15 @@ function create_fragment(;coords_string=nothing,xyzfile=nothing,pdbfile=nothing,
 **jSCF** (a function to run the Jotunn RHF/UHF code).
 
 ```julia
-function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", guess::String="hcore", basisfile::String="none", maxiter::Int64=120, 
-    print_final_matrices::Bool=false, rmsDP_threshold::Float64=5e-9, maxDP_threshold::Float64=1e-7, tei_type::String="sparse4c",
-    energythreshold::Float64=1e-8, debugprint::Bool=false, fock_algorithm::String="loop", 
-    levelshift::Bool=false, levelshift_val::Float64=0.10, lshift_thresh::Float64=0.01,
-    damping::Bool=true, damping_val::Float64=0.4, damping_thresh::Float64=0.01,
-    diis::Bool=false, diis_size::Int64=7, diis_thresh::Float64=0.01,
-    printlevel::Int64=1)
+function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::String="none",
+    guess::String="hcore", basisfile::String="none", maxiter::Int64=120, 
+    print_final_matrices::Bool=false, rmsDP_threshold::Float64=5e-9, maxDP_threshold::Float64=1e-7, 
+    tei_type::String="sparse4c", energythreshold::Float64=1e-8, debugprint::Bool=false, 
+    fock_algorithm::String="loop", levelshift::Bool=false, levelshift_val::Float64=0.10, 
+    lshift_thresh::Float64=0.01,damping::Bool=true, damping_val::Float64=0.4, 
+    damping_thresh::Float64=0.01,diis::Bool=true, diis_size::Int64=5, diis_startiter::Int64=4, 
+    DIISBfac::Float64=1.05, diis_error_conv_threshold::Float64=5e-7, calc_density::Bool=false,
+    printlevel::Int64=1, fock4c_speedup::String="simd", nopop::Bool=false)
 ```
 
 ### How to use:
@@ -147,25 +164,11 @@ using Jotunn
 H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
 
 #More keywords
-result= jSCF(H2O, "sto-3g"; maxiter=200, fock_algorithm="turbo", printlevel=2,
-    WFtype="RHF", levelshift=2.0, lshift_thresh=1e-4, tei_type="4c", 
+result= jSCF(H2O, "sto-3g"; maxiter=200, printlevel=2,
+    WFtype="RHF", levelshift=2.0, lshift_thresh=1e-4, tei_type="sparse4c", 
     print_final_matrices=true, debugprint=true)
  ```
 
-**alloptions-input.jl:**
- ```julia
-using Jotunn
-H2O = create_fragment(xyzfile="h2o.xyz", charge=0, mult=1)
-#All features
-result = jSCF(H2O, basisset="STO-3G"; WFtype="RHF", guess="hcore", basisfile="none", maxiter=120, 
-    print_final_matrices=false, rmsDP_threshold=5e-9, maxDP_threshold=1e-7, tei_type="4c",
-    energythreshold=1e-8, debugprint=false, fock_algorithm="turbo", 
-    levelshift=false, levelshift_val=0.10, lshift_thresh=0.01,
-    damping=true, damping_val=0.4, damping_thresh=0.01,
-    printlevel=1)
- ```
-
-#
 ### Example output:
 
 ```text

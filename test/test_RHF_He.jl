@@ -19,60 +19,60 @@ ref_energy=-2.807783957535
 #Actual tests with different parameters
 @testset "$WFtype/$basis1 on He (sparse4c,default)" begin
     #Simple call
-    result= jSCF(mol, basis1; printlevel=0)
+    result= jSCF(mol, basis1; printlevel=0, maxiter=20)
     @test isapprox(result["energy"],ref_energy)
 end
 
 @testset "$WFtype/$basis1 on He (4c)" begin
     #Simple call
-    result= jSCF(mol, basis1; printlevel=0, tei_type="4c")
+    result= jSCF(mol, basis1; printlevel=0, maxiter=20, tei_type="4c")
     @test isapprox(result["energy"],ref_energy)
 end
 
 @testset "$WFtype/$basis1 on He (no SCF-aids)" begin
     #Simple call
-    result= jSCF(mol, basis1; printlevel=0, diis=false, damping=false, levelshift=false)
+    result= jSCF(mol, basis1; printlevel=0, maxiter=20, diis=false, damping=false, levelshift=false)
     @test isapprox(result["energy"],ref_energy)
 end
 
 @testset "$WFtype/$basis1 on He (diis)" begin
     #Simple call
-    result= jSCF(mol, basis1; printlevel=0, diis=true, damping=false, levelshift=false)
+    result= jSCF(mol, basis1; printlevel=0, maxiter=20, diis=true, damping=false, levelshift=false)
     @test isapprox(result["energy"],ref_energy)
 end
 
 @testset "$WFtype/$basis1 on He (damping)" begin
     #Simple call
-    result= jSCF(mol, basis1; printlevel=0, diis=false, damping=true, levelshift=false)
+    result= jSCF(mol, basis1; printlevel=0, maxiter=20, diis=false, damping=true, levelshift=false)
     @test isapprox(result["energy"],ref_energy)
 end
 
 @testset "$WFtype/$basis1 on He (levelshift)" begin
     #Simple call
-    result= jSCF(mol, basis1; printlevel=0, diis=false, damping=false, levelshift=true)
+    result= jSCF(mol, basis1; printlevel=0, maxiter=20, diis=false, damping=false, levelshift=true)
     @test isapprox(result["energy"],ref_energy)
 end
 
 @testset "$WFtype/$basis1 on He (diis+damp)" begin
     #Simple call
-    result= jSCF(mol, basis1; printlevel=0, diis=true, damping=true, levelshift=false)
+    result= jSCF(mol, basis1; printlevel=0, maxiter=20, diis=true, damping=true, levelshift=false)
     @test isapprox(result["energy"],ref_energy)
 end
 
 @testset "$WFtype/$basis1 on He (diis+levelshift)" begin
     #Simple call
-    result= jSCF(mol, basis1; printlevel=0, diis=true, damping=false, levelshift=true)
+    result= jSCF(mol, basis1; printlevel=0, maxiter=20, diis=true, damping=false, levelshift=true)
     @test isapprox(result["energy"],ref_energy)
 end
 
 @testset "$WFtype/$basis1 on He (damping+levelshift)" begin
     #Simple call
-    result= jSCF(mol, basis1; printlevel=0, diis=false, damping=true, levelshift=true)
+    result= jSCF(mol, basis1; printlevel=0, maxiter=20, diis=false, damping=true, levelshift=true)
     @test isapprox(result["energy"],ref_energy)
 end
 
 @testset "$WFtype/$basis1 on He (diis+damping+levelshift)" begin
    #Simple call
-    result= jSCF(mol, basis1; printlevel=0, diis=true, damping=true, levelshift=true)
+    result= jSCF(mol, basis1; printlevel=0, maxiter=20, diis=true, damping=true, levelshift=true)
     @test isapprox(result["energy"],ref_energy)
 end

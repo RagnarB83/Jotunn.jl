@@ -1,5 +1,5 @@
 """
-Jotunn: a simple QM program in Julia by Ragnar Bjornsson
+Jotunn: a simple molecular HF/DFT program in Julia by Ragnar Bjornsson
 Integrals via the GaussianBasis.jl interface to Libcint
 """
 module Jotunn
@@ -15,6 +15,7 @@ using Crayons
 using Molecules #FermiQC
 using GaussianBasis #FermiQC
 using PyCall
+import Libxc
 
 #Linear Algebra speed-up packages
 #using LoopVectorization
@@ -34,6 +35,7 @@ include("pop_ana.jl")
 include("printing.jl")
 include("tools.jl")
 include("num_integration.jl")
+include("DFT_tools.jl")
 
 #Export the callable functions of Jotunn
 export jSCF, create_fragment

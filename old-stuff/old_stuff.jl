@@ -448,3 +448,142 @@ function Fock_loop_sparse_perm_RHF(Hcore,P,dim,tei::Jint_sparse)
     F = Hcore + G
     return F
 end
+
+
+"""
+choose_Fock: Choosing Fock algorithm based on user-chosen WFtype,fock_algorithm variables etc.
+No longer needed 
+"""
+function choose_Fock(WFtype,DFTobj,fock_algorithm,tei_type,printlevel)
+    print_if_level("Choosing Fock algorithm.",1,printlevel)
+    #DFTobj only used if RKS/UKS
+    if WFtype == "RHF"
+        if tei_type == "4c"
+            if fock_algorithm == "loop" #fast for small systems
+                print_if_level("Using Fock_loop",1,printlevel)
+                Fock=Fock_loop_RHF
+            elseif fock_algorithm == "turbo" #faster for larger systems (but long compilation).
+                print_if_level("Using Fock_turbo (requires LoopVectorization to be loaded",1,printlevel)
+                Fock=Fock_turbo_RHF
+            end
+        elseif tei_type == "sparse4c"
+            if fock_algorithm == "loop" || fock_algorithm == "loop_sparse" #generally recommended
+                print_if_level("Using Fock_loop_sparse",1,printlevel)
+                Fock=Fock_loop_sparse_RHF
+                fock_algorithm="loop_sparse"
+            else
+                println("unknown fock_algorithm choice")
+                exit()
+            end
+        end
+    elseif WFtype == "RKS"
+        if tei_type == "sparse4c"
+            #Non-hybrid DFT
+            if DFTobj.hybrid == false
+                Fock=NonHybridDFT_RKS
+                fock_algorithm="NonHybridDFT_RKS"
+                print_if_level("Using $fock_algorithm",1,printlevel)
+            #Hybrid-DFT
+            else
+                Fock=HybridDFT_RKS
+                fock_algorithm="HybridDFT_RKS"
+                print_if_level("Using $fock_algorithm",1,printlevel)
+            end
+        else
+            println("Only tei_type=sparse4c allowed for RKS")
+            exit()
+        end
+    elseif WFtype == "UKS"
+        println("UKS not ready")
+        exit()
+    else #UHF
+        if tei_type == "4c"
+            if fock_algorithm == "loop"
+                Fock=Fock_loop_UHF
+            elseif fock_algorithm == "turbo"
+                print_if_level("Using Fock_turbo_UHF (requires LoopVectorization to be loaded",1,printlevel)
+                Fock=Fock_UHF_turbo_UHF
+            end
+        elseif tei_type == "sparse4c"
+            if fock_algorithm == "loop"
+                print_if_level("Using Fock_loop_sparse_UHF",1,printlevel)
+                Fock=Fock_loop_sparse_UHF
+                fock_algorithm="loop_sparse(UHF)"
+            else
+                println("unknown fock_algorithm choice")
+                exit()
+            end
+        end
+    end
+    return Fock,fock_algorithm
+end
+
+
+"""
+Fock_turbo: Fock-matrix RHF case with @turbo macro
+Benchmark: RHF/def2-QZVPP on H2O with MBA: 
+63.693465  seconds total, 0.325363 seconds per Fock (3-4 threads)
+77.170879 seconds total, 0.320401 per Fock (1 thread)
+Warning: Uses threading by default. Turn off by export OMP_NUM_THREADS=1
+"""
+#   function Fock_turbo_RHF(Hcore,P,dim,tei::Array{Float64,4})
+#      #println("Fock_turbo disabled.")
+#      #exit()
+#       JK = zeros(dim,dim)
+#       @turbo for µ in 1:dim
+#           for ν in 1:dim
+#               for λ in 1:dim
+#                   for σ in 1:dim
+#                       JK[µ,ν] += P[λ,σ]*(tei[ν,µ,λ,σ]-0.5*tei[ν,λ,µ,σ])
+#                   end
+#               end
+#           end
+#       end
+#       F = Hcore + JK
+#       return F
+#   end
+
+ """
+ Fock_UHF_turbo: Fock-matrix UHF-case with @turbo macro
+ """
+#  function Fock_turbo_UHF(Hcore,Pi,Pj,dim,tei::Array{Float64,4})
+#     JK = zeros(dim,dim)
+#     @turbo for µ in 1:dim
+#         for ν in 1:dim
+#             for λ in 1:dim
+#                 for σ in 1:dim
+#                     JK[µ,ν] += Pi[λ,σ]*tei[ν,µ,λ,σ]+Pj[λ,σ]*tei[ν,µ,λ,σ]-Pi[λ,σ]*tei[ν,λ,µ,σ]
+#                 end
+#             end
+#         end
+#     end
+#     F = Hcore + JK
+#     return F
+# end
+
+#"""
+#Fock_tullio: Fock with Tullio and Loopvectorization library (n)
+#Benchmark: RHF/def2-QZVPP on H2O with MBA: 
+#268.934002 seconds total, 3.69 seconds per Fock  (ONLY TULLIO LIBRARY LOADED)
+#63.543055 seconds total, 0.354601 seconds per Fock  (LOOPVECT AND TULLIO LIBRARY LOADED, THREADED)
+#72.814342 seconds total, 0.398519 seconds per Fock  (LOOPVECT AND TULLIO LIBRARY LOADED, 1 THREAD)
+#"""
+#function Fock_tullio(Hcore,P,dim,tei::Array{Float64,4})
+#    JK = zeros(dim,dim)
+#    @tullio JK[µ,ν] += P[λ,σ]*(tei[ν,µ,λ,σ]-0.5*tei[ν,λ,µ,σ])
+#    F = Hcore + JK
+#    return F
+#end
+
+
+#"""
+#Fock matrix using tensor macro (REQUIRES TensorOperations)
+#Benchmark: RHF/def2-QZVPP on H2O with MBA: 
+#109.18 seconds total, 1.13 seconds per Fock (1 thread)
+#"""
+#function Fock_tensor(Hcore,P,dim,tei::Array{Float64,4})
+#    JK = zeros(dim,dim)
+#    @tensor JK[µ,ν] += P[λ,σ]*(tei[ν,µ,λ,σ]-0.5*tei[ν,λ,µ,σ])
+#    F = Hcore + JK
+#    return F
+#end

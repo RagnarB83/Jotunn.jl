@@ -1,28 +1,30 @@
 #Interface to Numgrid: a Rust library with Python API
 #TODO: Call Rust library directly via C-Interface
-#Write separate Julia Interface
+# or write separate Julia Interface
 
 
 
 """
 numgrid_call: Function that calls the numgrid py interface 
 """
-function numgrid_call(gridtype,fragment, bset, radial_precision=1.0e-12,min_num_angular_points=86,max_num_angular_points=302,hardness=3)
+function numgrid_call(gridtype,fragment, bset; radial_precision=1.0e-12, min_num_angular_points=86,max_num_angular_points=302,hardness=3)
 
-    #Defining numgrid Python part
+    #Defining some Python functions that call the numgrid routines
     py"""
     import numgrid
-    def numgrid_atomgrid(coordinates_bohr, alpha_max=None, alpha_min = None, proton_charges=None, 
+    #This loops over atoms
+    def numgrid_atomgrids(coordinates_bohr, alpha_max=None, alpha_min = None, proton_charges=None, 
         radial_precision=1.0e-12, min_num_angular_points=86,max_num_angular_points=302, hardness=3):
-        print("radial_precision: ", radial_precision)
-        print("min_num_angular_points: ", min_num_angular_points)
-        print("max_num_angular_points: ", max_num_angular_points)
-        print("Center coordinates(au): ", coordinates_bohr)
-        print("proton_charges:", proton_charges)
-        print("alpha_max:", alpha_max)
-    
+        #print("radial_precision: ", radial_precision)
+        #print("min_num_angular_points: ", min_num_angular_points)
+        #print("max_num_angular_points: ", max_num_angular_points)
+        #print("Center coordinates(au): ", coordinates_bohr)
+        #print("proton_charges:", proton_charges)
+        #print("alpha_max:", alpha_max)
+        #print("alpha min:", alpha_min)
+        all_coordinates=[]
+        all_weights=[]
         for center_index in range(len(coordinates_bohr)):
-            # atom grid using explicit basis set parameters
             coordinates, weights = numgrid.atom_grid(
                 alpha_min[center_index],
                 alpha_max[center_index],
@@ -32,10 +34,11 @@ function numgrid_call(gridtype,fragment, bset, radial_precision=1.0e-12,min_num_
                 proton_charges,
                 center_index,
                 coordinates_bohr,
-                hardness=hardness,
-            )
-        return coordinates, weights
-    
+                hardness=hardness)
+            all_coordinates+=coordinates
+            all_weights+=weights
+        return all_coordinates, all_weights
+
     def LMG_radial_grid(nuc_charge=None, alpha_min=None, alpha_max=None, radial_precision=1.0e-12):
         
         # radial grid (LMG) using explicit basis set parameters
@@ -86,7 +89,8 @@ function numgrid_call(gridtype,fragment, bset, radial_precision=1.0e-12,min_num_
         #coordinates, weights = py"numgrid_atomgrid(30,min_num_angular_points=86,max_num_angular_points=434)"
         
         #Getting grid for all atoms
-        grid_coords_bohr, gridweights = py"numgrid_atomgrid"(coordinates_bohr, alpha_min=atoms_smallest_expons_per_atom_and_l, alpha_max=atoms_largest_expons_per_atom, proton_charges=proton_charges, radial_precision=radial_precision, 
+        grid_coords_bohr, gridweights = py"numgrid_atomgrids"(coordinates_bohr, alpha_min=atoms_smallest_expons_per_atom_and_l, 
+            alpha_max=atoms_largest_expons_per_atom, proton_charges=proton_charges, radial_precision=radial_precision, 
             min_num_angular_points=min_num_angular_points,max_num_angular_points=max_num_angular_points,hardness=hardness)
     elseif gridtype == "LMG+Leb"
         radii, gridweights = py"LMG_radial_grid"(basis_name=basis_name)
@@ -106,6 +110,7 @@ end
 
 """
 integrate_density
+TODO: add threading
 """
 function integrate_density(⍴,gridweights)
     N=0.0
@@ -114,3 +119,30 @@ function integrate_density(⍴,gridweights)
     end
     return N
 end
+
+
+
+
+
+"""
+write_gridpoints_to_disk: Write molecule and gridpoints to disk as an XYZ-file in Angstroms.
+For visualization in e.g. VMD. Gridpoints are labelled as Xe.
+"""
+function write_gridpoints_to_disk(file,gridpoints,fragment)
+    bohrang=0.529177
+    io = open(file, "w");
+    write(io, string(length(gridpoints)+fragment.numatoms))
+    write(io, "\n")
+    write(io, "Atomcoords + gridpoints in Angstrom\n")
+    for i in 1:fragment.numatoms
+        el=fragment.elems[i]
+        c=fragment.coords[i,:]
+        write(io, "$el  $(c[1]) $(c[2]) $(c[3])\n")
+    end
+    for gp in gridpoints
+        #Converting gridpoints to Angstrom
+        write(io, "Xe $(gp[1]*bohrang) $(gp[2]*bohrang) $(gp[3]*bohrang)\n")
+    end
+    close(io)
+end
+

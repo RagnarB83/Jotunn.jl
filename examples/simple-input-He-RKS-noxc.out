@@ -1,0 +1,125 @@
+radial_precision:  1e-12
+min_num_angular_points:  434
+max_num_angular_points:  770
+Center coordinates(au):  [(0.0, 0.0, 0.0)]
+proton_charges: [2]
+alpha_max: [6.362421394]
+alpha min: [{0: 0.3136497915}]
+Creating fragment
+[97;1m==================================================
+[0m[34;1m                   JOTUNN
+[0m[97;22ma simple quantum chemistry program in Julia
+[0m[97;1m==================================================
+[0m[33;1m
+jSCF: a HF/DFT program
+[0m
+[32;1mSYSTEM
+[0m========================= =================
+         Number of atoms                1
+        Molecule formula               He
+                  Charge                0
+       Spin multiplicity                1
+           No. electrons                2
+  No. unpaired electrons                0
+       Nuclear repulsion       0.00000000
+========================= =================
+[97;1m
+GEOMETRY (Cartesian coordinates in Å))
+[0m-------------------------------------------------------------
+  1   He       0.00000000       0.00000000       0.00000000
+-------------------------------------------------------------
+
+Integrals provided via GaussianBasis.jl library
+Creating basis set object
+
+Calculating 1-electron integrals
+Time calculating 1-electron integrals: 0.194029483
+Sparse integral calculation done.
+Time calculating 2-electron integrals: 0.554075008
+Creating grid
+Number of gridpoints: 39470
+Number of gridweights: 39470
+Time calculating grid: 1.582526235
+Providing guess: hcore
+
+[32;1mCALCULATION SETTINGS
+[0m========================= =================
+                 WF type              RKS
+               Basis set           sto-3g
+     No. basis functions                1
+                   Guess            hcore
+         2-electron type         sparse4c
+          Fock algorithm      loop-sparse
+     S lowest eigenvalue           1.0000
+              Levelshift            false
+    Levelshift parameter           0.1000
+  Lshift-turnoff thresh.           0.0100
+                 Damping             true
+       Damping parameter           0.4000
+    Damp-turnoff thresh.           0.0100
+                    DIIS             true
+           DIIS vec size                5
+        DIIS start iter.                4
+========================= =================
+
+Beginning SCF iterations
+Iter         Energy          deltaE        RMS-DP        Max-DP  Lshift    Damp    DIIS  Max[F,P]
+Inside RFock for Jint_KS
+Inside Fxc_form
+calc_energy (RKS)
+integrals.E_xc:0.0
+   1   -1.752071017[31m    -1.752071017[0m[32m   0.000000000[0m[32m   0.000000000[0m[39m   false[0m[33m    true[0m[39m   false[0m  0.0000
+Inside RFock for Jint_KS
+Inside Fxc_form
+calc_energy (RKS)
+integrals.E_xc:0.0
+   2   -1.752071017[32m     0.000000000[0m[32m   0.000000000[0m[32m   0.000000000[0m[39m   false[0m[39m   false[0m[39m   false[0m  0.0000
+Energy convergence threshold reached: 0.0 < 1.0e-8
+[32;1m
+                              SCF converged in 2 iterations! Hell yeah! 🎉
+
+[0mTime calculating SCF: 1.9388005
+Now creating density
+  0.130422 seconds (735.53 k allocations: 23.582 MiB, 86.68% compilation time)
+  0.003326 seconds (15 allocations: 816 bytes, 95.97% compilation time)
+Integrated no. of electrons: 2.000000000000313
+
+
+[33;1mMO Energies (closed-shell)
+[0m
+┌────┬──────┬──────────────┬──────────────┐
+│ MO │ Occ. │        E(Eh) │        E(eV) │
+├────┼──────┼──────────────┼──────────────┤
+│  1 │  2.0 │       0.1797 │       4.8893 │
+└────┴──────┴──────────────┴──────────────┘
+[33;1m
+Mulliken Population Analysis (closed-shell)
+[0m┌──────┬─────────┬────────────┐
+│ Atom │ Element │     Charge │
+├──────┼─────────┼────────────┤
+│    1 │      He │   0.000000 │
+└──────┴─────────┴────────────┘
+
+Sum of charges: 0.0000
+[33;1m
+Mayer bond orders
+[0mThreshold: 0.01
+
+[32;1mFINAL RESULTS
+[0m====================== =================
+      Final HF energy      -1.75207102
+     Molecule formula               He
+  Number of electrons                2
+            Basis set           sto-3g
+              WF type              RKS
+       Fock algorithm      loop-sparse
+       SCF iterations                2
+====================== =================
+Timings:
+Time calculating 1-electron integrals: 0.194029483
+Time calculating 2-electron integrals: 0.554075008
+Time calculating SCF: 1.9388005
+Time calculating grid: 1.582526235
+Sum of all recorded times:4.269431226
+ 24.782116 seconds (64.16 M allocations: 3.218 GiB, 6.70% gc time, 97.97% compilation time)
+result_sp_norm: Dict{Any, Any}("time" => 6.926869508, "finaliter" => 2, "int_electrons" => 2.000000000000313, "energy" => -1.7520710165929336)

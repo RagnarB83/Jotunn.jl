@@ -1,18 +1,5 @@
 
 """
-elem_to_nuccharge: Get nuclear charge for element-string
-"""
-function elem_to_nuccharge(elem)
-    elem_nuccharge_dict=Dict("H"=>1.0, "He"=>2.0, "Li"=>3.0, "Be"=>4.0, "B"=>5.0, "C"=>6.0, "N"=>7.0, "O"=>8.0, "F"=>9.0, "Ne"=>10.0 )
-    if haskey(elem_nuccharge_dict,elem) == false
-        println("Error: elem_to_nuccharge does not have this element defined. Needs to be fixed!")
-        exit()
-    end
-    charge=elem_nuccharge_dict[elem]
-    return charge
-end
-
-"""
 nuc_nuc_repulsion: Calculate nuclear-nuclear repulsion from elements and and coordinates
 """
 function nuc_nuc_repulsion(elems,coords)
@@ -49,6 +36,24 @@ function makeP(C, dim, Norb,scaling=2.0)
     end
     return P
 end
+
+function makeP2(C, dim, Norb,nocc)
+    P=zeros(dim,dim)
+    for µ in 1:dim
+        for ν in 1:dim
+            println("µ: $µ and ν:$ν")
+            for o in 1:Norb
+                println("o: $o")
+                println("C[µ,o]: ", C[µ,o])
+                println("C[ν,o]:", C[ν,o])
+                P[µ,ν] += nocc[o]*C[µ,o]*C[ν,o]
+                println("P[µ,ν:", P[µ,ν])
+            end
+        end
+    end
+    return P
+end
+
 
 """
 makeoccupationarray: Create array of occupation numbers

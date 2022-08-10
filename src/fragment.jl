@@ -19,6 +19,7 @@ Base.@kwdef mutable struct Fragment
     charge::Any=missing
     mult::Any=missing
     nuccharge::Int64=0
+    numelectrons::Any=missing
     mass::Float64 = 0.0
     numatoms::Int64=0
     atomlist::Array{Float64,1} = []
@@ -72,6 +73,11 @@ function create_fragment(;coords_string=nothing,xyzfile=nothing,pdbfile=nothing,
 
     #Nuclear charges 
     fragment.nuccharges = [findall(x->x==i, elements)[1] for i in elems]
+
+    #Number of electrons
+    sum_nuccharge=sum([elem_to_nuccharge(el) for el in fragment.elems])
+    num_el=floor(Int64,sum_nuccharge-fragment.charge)
+    fragment.numelectrons=num_el
 
     if label != nothing
         fragment.label=label
@@ -179,4 +185,37 @@ function molecular_formula(elems)
         formula=formula*i[1]*number
     end
     return formula
+end
+
+"""
+elem_to_nuccharge: Get nuclear charge for element-string
+"""
+function elem_to_nuccharge(elem)
+    nuc_charge = findall(x->x==elem, elements)[1]
+    return nuc_charge
+end
+
+"""
+print_geometry:
+"""
+function print_geometry(fragment,printlevel)
+    tf = TextFormat(up_right_corner     = '-',
+                              up_left_corner      = '-',
+                              bottom_left_corner  = '-',
+                              bottom_right_corner = '-',
+                              up_intersection     = '-',
+                              left_intersection   = '-',
+                              right_intersection  = '-',
+                              middle_intersection = '-',
+                              bottom_intersection = '-',
+                              column              = ' ',
+                              row                 = '-',
+                              hlines              = [:begin, :header, :end]);
+    if printlevel >0
+        print(Crayon(foreground = :white, bold = true), "\nGEOMETRY (Cartesian coordinates in Å))\n",Crayon(reset=true))
+        data=hcat(fragment.elems,fragment.coords)
+        pretty_table(data; tf = tf, border_crayon = crayon"bold blue", noheader = true,
+            show_row_number = true, formatters = ft_printf("%14.8f"))
+        println("")
+    end
 end

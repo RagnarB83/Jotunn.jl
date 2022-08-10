@@ -4,27 +4,25 @@ export jSCF
 """
 jSCF: the Jotunn SCF program (RHF,UHF,RKS,UKS)
 """
+function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", 
+    functional::String="none", libxc_keyword::String="none", manual_func::String="none",
+    guess::String="hcore", basisfile::String="none", maxiter::Int64=120, 
+    print_final_matrices::Bool=false, rmsDP_threshold::Float64=5e-9, maxDP_threshold::Float64=1e-7, 
+    tei_type::String="sparse4c", energythreshold::Float64=1e-8,
+    fock_algorithm::String="loop-sparse", levelshift::Bool=false, levelshift_val::Float64=0.10, 
+    lshift_thresh::Float64=0.01,damping::Bool=true, damping_val::Float64=0.4, 
+    damping_thresh::Float64=0.01, diis::Bool=true, diis_size::Int64=5, diis_startiter::Int64=4, 
+    DIISBfac::Float64=1.05, diis_error_conv_threshold::Float64=5e-7, calc_density::Bool=false,
+    printlevel::Int64=1, nopop::Bool=false)
 
-function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::String="none",
-    guess::String="hcore", 
-    basisfile::String="none", maxiter::Int64=120, print_final_matrices::Bool=false, 
-    rmsDP_threshold::Float64=5e-9, maxDP_threshold::Float64=1e-7, tei_type::String="sparse4c",
-    energythreshold::Float64=1e-8, debugprint::Bool=false, fock_algorithm::String="loop", 
-    levelshift::Bool=false, levelshift_val::Float64=0.10, lshift_thresh::Float64=0.01,
-    damping::Bool=true, damping_val::Float64=0.4, damping_thresh::Float64=0.01,
-    diis::Bool=true, diis_size::Int64=5, diis_startiter::Int64=4, DIISBfac::Float64=1.05,
-    diis_error_conv_threshold::Float64=5e-7, calc_density::Bool=false,
-    printlevel::Int64=1, fock4c_speedup::String="simd", nopop::Bool=false)
-
-    #Timing whole function
+    #Beginning of time block
     totaltime=@elapsed begin
 
     print_program_header(printlevel)
-    global debugflag  = debugprint
 
 
     #Removing old matrix files if present
-    if debugprint == true || print_final_matrices == true
+    if printlevel > 2 || print_final_matrices == true
         for matrixfile in ["Fmatrix","Cmatrix","Pmatrix","C_a_matrix","C_b_matrix","F_a_matrix",
             "F_b_matrix","P_a_matrix","P_b_matrix"]
             rm(matrixfile, force=true)
@@ -35,16 +33,19 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
     # BASIC SYSTEM SETUP
     #############################
     #Num. electrons and nuc-nuc repulsion from total charge and nuclear charges
-    sum_nuccharge=sum([elem_to_nuccharge(el) for el in fragment.elems])
-    num_el=floor(Int64,sum_nuccharge-fragment.charge)
+    #sum_nuccharge=sum([elem_to_nuccharge(el) for el in fragment.elems])
+    #num_el=floor(Int64,sum_nuccharge-fragment.charge)
+    num_el=fragment.numelectrons
     E_ZZ=nuc_nuc_repulsion(fragment.elems,fragment.coords)
 
     #Check whether chosen multiplicity makes sense before continuing
     check_multiplicity(num_el,fragment.charge,fragment.mult)
-    if fragment.mult != 1 && WFtype=="RHF"
-        print_if_level("RHF and multiplicity > 1 is not possible. Switching to UHF",1,printlevel)
-        WFtype="UHF"
+    if fragment.mult == 2 && (WFtype=="RHF" || WFtype=="RKS")
+        print_if_level("RHF/RKS and multiplicity > 1 is not possible. Switching to UHF/UKS",1,printlevel)
+        if WFtype=="RHF" WFtype="UHF" end
+        if WFtype=="RKS" WFtype="UKS" end
     end
+
     #RHF vs. UHF
     if WFtype == "RHF"
         #Num occ orbitals in RHF
@@ -52,28 +53,70 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
         unpaired_electrons=0
         DFTobj=nothing
         grid=false
+        Intobj=Jint_HF
     elseif WFtype == "RKS"
+        grid=true
         #restricted Kohn-Sham
         #Num occ orbitals in RHF
         numoccorbs=Int64(num_el/2)
         unpaired_electrons=0
-        if functional == "none"
-            println("WFtype is RKS but no functional chosen. Exiting.")
+        println("RKS chosen.")
+        println("functional: $functional and libxc_keyword: $libxc_keyword")
+        if functional == "none" && libxc_keyword == "none"
+            println("WFtype is RKS but no functional or libxc_keyword chosen. Exiting.")
+            exit()
+        elseif functional != "none" && libxc_keyword != "none"
+            println("Error: Both functional and libxc_keyword can not be used. Exiting.")
             exit()
         end
-        grid=true
-        #TODO: Choose and create DFT functional object here
-        DFTobj=JDFT(functional,false)
+
+        println("Calling choose_functional")
+        libxc_functional,func_rung, manual_option = choose_functional(functional,libxc_keyword)
+        #Non-hybrid
+        if func_rung < 4
+            DFTobj=JDFT(manual=manual_option, manual_func=manual_func, hybrid=false, libxc_functional=libxc_functional,
+            functional_rung=func_rung)
+            Intobj=Jint_KS
+        #Hybrid
+        else
+            DFTobj=JDFT(manual=manual_option, manual_func=manual_func, hybrid=true, libxc_functional=libxc_functional,
+            functional_rung=func_rung)
+            Intobj=Jint_hybridKS
+        end
+
     elseif WFtype == "UKS"
-        println("UKS not yet ready")
-        exit()
-        DFTobj=JDFT(functional,false)
         grid=true
         unpaired_electrons= fragment.mult - 1
         paired_el=num_el-unpaired_electrons
         paired_el_half=paired_el/2
         numoccorbs_⍺=trunc(Int64,paired_el_half+unpaired_electrons)
         numoccorbs_β=trunc(Int64,paired_el_half)
+
+        println("functional: $functional and libxc_keyword: $libxc_keyword")
+        if functional == "none" && libxc_keyword == "none"
+            println("WFtype is UKS but no functional or libxc_keyword chosen. Exiting.")
+            exit()
+        elseif functional != "none" && libxc_keyword != "none"
+            println("Error: Both functional and libxc_keyword can not be used. Exiting.")
+            exit()
+        end
+
+        println("Calling choose_functional")
+        libxc_functional,func_rung, manual_option = choose_functional(functional,libxc_keyword, openshell=true)
+        #Non-hybrid
+        if func_rung < 4
+            DFTobj=JDFT(manual=manual_option, manual_func=manual_func, hybrid=false, libxc_functional=libxc_functional,
+            functional_rung=func_rung)
+            Intobj=Jint_KS
+        #Hybrid
+        else
+            DFTobj=JDFT(manual=manual_option, manual_func=manual_func, hybrid=true, libxc_functional=libxc_functional,
+            functional_rung=func_rung)
+            Intobj=Jint_hybridKS
+        end
+
+
+
         #TODO: broken-symmetry spin-coupled case
     elseif WFtype == "UHF"
         unpaired_electrons= fragment.mult - 1
@@ -84,6 +127,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
         #TODO: broken-symmetry spin-coupled case
         DFTobj=nothing
         grid=false
+        Intobj=Jint_HF
     else
         println("Unknown WFtype! Exiting.")
         exit()
@@ -93,8 +137,9 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
     if printlevel > 0
         print_system(num_el,fragment.prettyformula,E_ZZ,fragment.charge,fragment.mult,fragment.numatoms,unpaired_electrons)
     end
+    print_geometry(fragment,printlevel)
     #############################
-    # INTEGRALS
+    # BASIS SET
     #############################
     #Setting up 1-electron and 2-electron integrals
     print_if_level("Integrals provided via GaussianBasis.jl library",1,printlevel)  
@@ -105,24 +150,36 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
     bset_atom_mapping = bf_atom_mapping(bset)
     #Create array of tuples with atom,shell info for each BF
     bf_atom_shell_map=create_bf_shell_map(bset)
+    # Create array of l and ml values
+    mlvalues=create_ml_values(bset)
+    lvalues=create_l_values(bset)
 
+    #Print basis set information here
+    if printlevel >0
+        #println("No. contracted basis functions: $dim")
+        println(GaussianBasis.string_repr(bset))
+    end
+    #############################
+    # INTEGRALS
+    #############################
     print_if_level("\nCalculating 1-electron integrals",1,printlevel) 
     #Calculating 1-electron integrals
-    T = kinetic(bset)
-    V = nuclear(bset)
-    S = overlap(bset)
-    Hcore = T + V #Combining T and V into Hcore
-    
-    #Overlap diagonalization
+    time_1el=@elapsed begin
+        T = kinetic(bset)
+        V = nuclear(bset)
+        S = overlap(bset)
+        Hcore = T + V #Combining T and V into Hcore
+    end
+    print_if_level("Time calculating 1-electron integrals: $time_1el",1,printlevel)
+    #Overlap
     Sval,Svec = eigen(S)
     lowest_S_eigenval=minimum(Sval)
     #Transformation matrix
     SVAL_minhalf = Diagonal(Sval)^-0.5
     Stemp = SVAL_minhalf*transpose(Svec)
     S_minhalf = Svec * Stemp
-    #print_if_level("Calculating 2-electron integrals (tei_type: $tei_type)",1,printlevel)
+    print_if_level("Calculating 2-electron integrals (tei_type: $tei_type)",1,printlevel)
     #Calculating two-electron integrals: tei_type: 4c, sparse4c
-    #
     time_tei=@elapsed tei = tei_calc(bset,tei_type,printlevel)
     print_if_level("Time calculating 2-electron integrals: $time_tei",1,printlevel)
 
@@ -130,14 +187,15 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
     if tei_type == "sparse4c"
         #Note: Takes 0.10-0.13 s for C16 RHF/STO-3G
         #due to list comprehension, speed up?
-        @time integrals = Jint(Hcore=Hcore,unique_indices=[i .+ 1 for i in tei[1]],
-        values=tei[2], length=length(tei[2]),bset=bset,bset_atom_mapping=bset_atom_mapping,
-        bf_atom_shell_map=bf_atom_shell_map)
+        integrals = Intobj(Hcore=Hcore,S=S, S_minhalf=S_minhalf, unique_indices=[i .+ 1 for i in tei[1]],
+            values=tei[2], length=length(tei[2]),bset=bset,bset_atom_mapping=bset_atom_mapping,
+            bf_atom_shell_map=bf_atom_shell_map,DFT=DFTobj, mlvalues=mlvalues, lvalues=lvalues)
+        fock_algorithm="loop-sparse" #Only a string for printing
     else
-        #println("tei_type other than sparse4c disabled for the moment")
-        #exit()
+        #To be deleted. Only kept on for RHF comparison
         integrals = Jint_4rank(Hcore=Hcore,tensor=tei,bset=bset,bset_atom_mapping=bset_atom_mapping,
-        bf_atom_shell_map=bf_atom_shell_map)
+        bf_atom_shell_map=bf_atom_shell_map, mlvalues=mlvalues, lvalues=lvalues)
+        fock_algorithm="loop-4rank" #Only a string for printing
     end
 
     #############################
@@ -148,14 +206,22 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
     if calc_density == true grid=true end
     if grid == true
         println("Creating grid")
-        time_grid=@elapsed gridpoints,gridweights = numgrid_call("atomgrid",fragment,bset)
-        println("Number of gridpoints: $(length(gridpoints))")
-        println("Number of gridweights: $(length(gridweights))")
+        #TODO: Create gridkeywords: Grid1-7 or something?
+        time_grid=@elapsed gridpoints,gridweights = numgrid_call("atomgrid",fragment,bset;
+            radial_precision=1e-12,min_num_angular_points=434,max_num_angular_points=770)
+        print_if_level("Number of gridpoints: $(length(gridpoints))",1,printlevel)
+        print_if_level("Number of gridweights: $(length(gridweights))",1,printlevel)
         #NOTE: Gridpoint coords are in Bohrs
+        #write_gridpoints_to_disk("gridpoints.xyz",gridpoints,fragment)
         #Adding gridpoints to object
         integrals.gridpoints=gridpoints
         integrals.gridweights=gridweights
         print_if_level("Time calculating grid: $time_grid",1,printlevel)
+
+        #If grid is calculated we should also pre-calculate BFvalues at gridpoints
+        BFvalues_calc(integrals) # occupies integrals.BFvalues
+        #println("Size of object BFvalues:", varinfo(r"integrals.BFvalues"))
+
     else
         time_grid=0.0
     end
@@ -164,8 +230,8 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
     #############################
     # CHOOSING FOCK ALGORITHM
     #############################
-    #Choosing Fock/Kohn-Sham algorithm (based on RHF vs. RKS vs. UKS vs. UHF, 2el-int-type etc.)
-    Fock,fock_algorithm = choose_Fock(WFtype,DFTobj,fock_algorithm,tei_type,printlevel)
+    #Multiple dispatch chooses Fock method based on integrals object type and number of P,F input matrices
+    #TODO: Once density fitting and direct-SCF we need to revisit this
 
     #############################
     # GUESS
@@ -177,10 +243,23 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
             C = compute_core_guess(Hcore,S_minhalf)
             P = makeP(C, dim, numoccorbs) #Calculate new P from C
         else
-            #UHF
+            #UHF or UKS
+            #A=zeros(dim,dim)
+            #for i in 1:numoccorbs_⍺; A[i,i]=1 end
+            #B=zeros(dim,dim)
+            #for i in 1:numoccorbs_β; B[i,i]=1 end
+
             C = compute_core_guess(Hcore,S_minhalf)
-            P_⍺ = makeP(C, dim, numoccorbs_⍺) #Calculate new P from C
-            P_β = makeP(C, dim, numoccorbs_β) #Calculate new P from C
+
+            #C_⍺ = compute_core_guess(A*Hcore,S_minhalf)
+            #C_β = compute_core_guess(B*Hcore,S_minhalf)
+            #println("numoccorbs_⍺: $numoccorbs_⍺")
+            #println("numoccorbs_β: $numoccorbs_β")
+            #println("C_⍺: $C_⍺")
+            #println("C_β: $C_β")
+            P_⍺ = makeP(C, dim, numoccorbs_⍺, 1.0) #Calculate new P from C
+            P_β = makeP(C, dim, numoccorbs_β, 1.0) #Calculate new P from C
+            P=P_⍺+P_β
         end
     else
         println("unknown guess")
@@ -197,14 +276,17 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
     # SCF
     ##########################
     print_if_level("\nBeginning SCF iterations",1,printlevel)
+    
     #Initializing some variables that will change during the iterations
     energy_old=0.0; energy=0.0; P_RMS=9999; finaliter=nothing
+    Resultsdict=Dict()
     if WFtype=="RHF" || WFtype=="RKS"
         eps=zeros(dim)
         P_old=deepcopy(P)
     else
         eps_⍺=zeros(dim); eps_β=zeros(dim); 
         P_⍺_old=deepcopy(P_⍺); P_β_old=deepcopy(P_β)
+        
     end
 
     #Initializing levelshift, damping and DIIS settings
@@ -215,45 +297,67 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
     else
         diisobj=JDIIS(active=false) #Creating dummy JDIIS object
     end
+    #Print 1-elec matrices before SCF if printlevel > 2
+    if printlevel > 2 print_1_elmatrices(T,V,Hcore,S,C,P) end
 
     #SCF loop beginning
     if printlevel == 1 @printf("%4s%15s%16s%14s%14s%8s%8s%8s%10s\n", "Iter", "Energy", "deltaE", "RMS-DP", "Max-DP", "Lshift", "Damp", "DIIS", "Max[F,P]") end
 
+    #println("P_⍺")
+    #print_matrix(P_⍺)
+    #println("P_β")
+    #print_matrix(P_β)
+    #println("P")
+    #print_matrix(P)
+
     time_scf=@elapsed for iter in 1:maxiter
         if printlevel > 1 print_iteration_header(iter) end
         if WFtype == "RHF" || WFtype=="RKS"
+
             #Optional damping of P before making Fock
             P = damping_control(P,P_old,damping,damping_val,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=damping_thresh)
             F = Fock(P,dim,integrals) #Make Fock-matrix
+            #println("F: ")
+            #print_matrix(F)
+            #println("C: ")
+            #print_matrix(C)
+            #println("P: ")
+            #print_matrix(P)
             FP_comm = FP_commutator(F,P,S,S_minhalf) #Calculating [F,P] commutator (for DIIS)
             #Possible levelshifting of Fock before diagonalization
             F = levelshift_control(F,levelshift,levelshift_val,numoccorbs,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
             F′ = transpose(S_minhalf)*F*S_minhalf #Transform Fock matrix
-            energy = E_ZZ + 0.5 * tr((Hcore+F)*P) #Calculate energy after Fock formation
+            energy =  calc_energy(E_ZZ,integrals,F,P) #Calculate RHF/RKS energy after Fock formation
             # Possible DIIS extrapolation of F′ matrix before diagonalization
             F′ = diis_control(diisobj,F′,energy,FP_comm,iter,printlevel)
+            
             eps, C′ = eigen(F′) #Diagonalize transformed Fock to get eps and C'
+            eps=real(eps) #Eigenvalues can be complex (tiny imaginary part) so taking real part
+            C′=real(C′) #Eigenvectors can be complex (tiny imaginary part) so taking real part 
+            #print_matrix(C′)
+
             C = S_minhalf*C′ # Get C from C'
+
             P_old=deepcopy(P) #Keep copy of old P
             P = makeP(C, dim, numoccorbs) #Calculate new P from C
-            if debugprint == true write_matrices(F,C,P) end
+            if printlevel > 2 write_matrices(F,C,P,S) end
         else
             #Possible damping of P matrices before making Fock
             P_⍺ = damping_control(P_⍺,P_⍺_old,damping,damping_val,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=damping_thresh)
             P_β = damping_control(P_β,P_β_old,damping,damping_val,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=damping_thresh)
             
             #Solve ⍺ part
-            F_⍺ = Fock(P_⍺,P_β,dim,integrals) #Update Fock-matrix alpha
+            F_⍺ = Fock(P_⍺,P_β,dim,integrals,1) #Update Fock-matrix alpha
             FP_comm_⍺ = FP_commutator(F_⍺,P_⍺,S,S_minhalf) #Calculating [F,P] commutator (for DIIS)
             F_⍺ = levelshift_control(F_⍺,levelshift,levelshift_val,numoccorbs_⍺,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
             F′_⍺ = transpose(S_minhalf)*F_⍺*S_minhalf #Transform Fock matrix
             #Solve β part
-            F_β = Fock(P_β,P_⍺,dim,integrals) #Update Fock-matrix beta
+            F_β = Fock(P_β,P_⍺,dim,integrals,2) #Update Fock-matrix beta
             FP_comm_β = FP_commutator(F_β,P_β,S,S_minhalf) #Calculating [F,P] commutator (for DIIS)
             F_β = levelshift_control(F_β,levelshift,levelshift_val,numoccorbs_β,dim,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=lshift_thresh)
             F′_β = transpose(S_minhalf)*F_β*S_minhalf #Transform Fock matrix
-
-            energy = E_ZZ + 0.5 * tr((Hcore+F_⍺)*P_⍺) + 0.5 * tr((Hcore+F_β)*P_β)  #Calculate energy
+            energy =  calc_energy(E_ZZ,integrals,F_⍺,P_⍺,F_β,P_β) #Calculate UHF/UKS energy after Fock formation
+            #energy = E_ZZ + 0.5 * tr((Hcore+F_⍺)*P_⍺) + 0.5 * tr((Hcore+F_β)*P_β)  #Calculate energy
 
             # Possible DIIS extrapolation of F′ matrix before diagonalization
             if diisobj.active == true
@@ -277,8 +381,6 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
             P=P_⍺+P_β
             P_old=P_⍺_old+P_β_old
             P_⍺_β=P_⍺-P_β
-            
-            #if debugprint == true write_matrices(F,C,P) end
 
             #Average FP_comm for UHF
             #????
@@ -303,8 +405,8 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
         if check_for_convergence(deltaE,energythreshold,FP_comm,diis_error_conv_threshold,iter,printlevel) == true
             finaliter=iter
             if printlevel > 0
-                if WFtype == "RHF"
-                    print_energy_contributions(energy,Hcore,F,P,T,E_ZZ)
+                if WFtype == "RHF" || WFtype == "RKS"
+                    print_energy_contributions(energy,Hcore,P,T,E_ZZ,integrals.E_xc)
                     #Printing of matrices if requested. 
                     if print_final_matrices == true 
                         write_matrix_to_file(F,"Fmatrix")
@@ -312,7 +414,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
                         write_matrix_to_file(P,"Pmatrix")
                     end
                 else
-                    #    print_energy_contributions(energy,Hcore,F,P,T,E_ZZ)
+                    print_energy_contributions(energy,Hcore,P,T,E_ZZ,integrals.E_xc)
                     if print_final_matrices == true 
                         write_matrix_to_file(P,"Pmatrix")
                         write_matrix_to_file(C_⍺,"C_a_matrix")
@@ -330,47 +432,71 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
         if iter == maxiter
             println("Failed to converge in $maxiter iterations!")
             #Gathering results into Dict and returning
-            Resultsdict=Dict("energy"=>"None","finaliter"=>"Failed ($maxiter iters)")
+            Resultsdict["energy"] = "None"
+            Resultsdict["finaliter"]="Failed ($maxiter iters)"
             return Resultsdict
         end
     end
     print_if_level("Time calculating SCF: $time_scf",1,printlevel)
+
     #################################################
     # ORBITALS, POPULATION ANALYSIS AND PROPERTIES
     #################################################
     #SCF loop done. Calculate and print properties
-    #ORBITALS AND POPULATION ANALYSIS
+    #DENSITY
+    #println("Density matrix:")
+    #pretty_table(P; header=[string(i) for i in 1:size(P)[2]], tf = tf_matrix, 
+    #    show_row_number = true, formatters = ft_printf("%3.1f"))
+
     if nopop == false
+        if grid == true
+            
+            #TODO: Case HF, calculate density here, already done if DFT
+            #TODO: Put in table?
+            #println("Now creating density")
+            #println("Integrated no. of electrons: $N")
+            #@time ⍴ = create_density(P,integrals)
+            #@time N = integrate_density(⍴,integrals.gridweights)
+            #Printing integrated no. of electrons
+            println("Integrated no. of electrons: $(integrals.N_⍺+integrals.N_β)")
+            println("Integrated no. of ⍺ electrons: $(integrals.N_⍺)")
+            println("Integrated no. of β electrons: $(integrals.N_β)")
+            Resultsdict["int_electrons"] = integrals.N_⍺ + integrals.N_β
+            Resultsdict["int_electrons_⍺"] = integrals.N_⍺
+            Resultsdict["int_electrons_β"] = integrals.N_β
+        end
+
+    #ORBITALS AND POPULATION ANALYSIS
         if WFtype=="RHF" || WFtype=="RKS"
-            if grid == true 
-                println("Now creating density")
-                @time ⍴ = create_density(P,integrals)
-                #println("⍴: $⍴")
-                @time N = integrate_density(⍴,integrals.gridweights)
-                println("Integrated no. of electrons: $N")
-            end
+
             #Orbitals
             occupations=makeoccupationarray(numoccorbs,dim,2.0) #Occupation array
-            print_MO_energies(occupations,eps)
             #Mulliken
             charges = mulliken(S,P,bset,fragment.elems)
-            print_Mulliken(charges,fragment.elems)
             P_⍺_β=zeros(dim,dim) #dummy spin-density
             #Mayer
             MBOs = Mayer_BO(S,P,P_⍺_β, bset_atom_mapping)
-            print_Mayer_analysis(MBOs,fragment.elems)
+            #Print
+            if printlevel > 0
+                print_MO_energies(occupations,eps)
+                print_Mulliken(charges,fragment.elems)
+                print_Mayer_analysis(MBOs,fragment.elems)
+            end
         else
             #Orbitals
             occupations_⍺=makeoccupationarray(numoccorbs_⍺,dim,1.0) #Occupation array
             occupations_β=makeoccupationarray(numoccorbs_β,dim,1.0) #Occupation array
-            print_MO_energies(occupations_⍺,occupations_β,eps_⍺,eps_β)
             #Mulliken
             P_⍺_β=P_⍺_β
             charges, spinpops = mulliken(S,P,P_⍺_β,bset,fragment.elems)
-            print_Mulliken(charges,fragment.elems,spinpops)
             #Mayer
             MBOs = Mayer_BO(S,P,P_⍺_β, bset_atom_mapping)
-            print_Mayer_analysis(MBOs,fragment.elems)
+            
+            if printlevel > 0
+                print_MO_energies(occupations_⍺,occupations_β,eps_⍺,eps_β)
+                print_Mulliken(charges,fragment.elems,spinpops)
+                print_Mayer_analysis(MBOs,fragment.elems)
+            end
         end
     end
 
@@ -384,16 +510,21 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", functional::Str
     #TODO: Add more here. 
     #Mulliken charges/spinpops, Mayer MBOs, dipole, all energy contributions,
     #orbital energies, occupation numbers, WFtype, numelectrons
-    Resultsdict=Dict("energy"=>energy,"finaliter"=>finaliter)
+    
+    Resultsdict["energy"]=energy
+    Resultsdict["finaliter"]=finaliter
 
     #TIMINGS: TODO properly
-    println("Timings:")
-    print_if_level("Time calculating 2-electron integrals: $time_tei",1,printlevel)
-    print_if_level("Time calculating SCF: $time_scf",1,printlevel)
-    print_if_level("Time calculating grid: $time_grid",1,printlevel)
-    all_times=[time_tei,time_scf,time_grid]
-    sum_of_all_times=sum(all_times)
-    println("Sum of all recorded times:", sum_of_all_times)
+    if printlevel >0
+        println("Timings:")
+        print_if_level("Time calculating 1-electron integrals: $time_1el",1,printlevel)
+        print_if_level("Time calculating 2-electron integrals: $time_tei",1,printlevel)
+        print_if_level("Time calculating SCF: $time_scf",1,printlevel)
+        print_if_level("Time calculating grid: $time_grid",1,printlevel)
+        all_times=[time_1el,time_tei,time_scf,time_grid]
+        sum_of_all_times=sum(all_times)
+        println("Sum of all recorded times:", sum_of_all_times)
+    end
 end #end of timing block
 Resultsdict["time"]=totaltime #addint total time
     return Resultsdict
@@ -406,12 +537,26 @@ end
 ###################
 
 """
-Jint: Jotunn integral struct in sparse form
-NOTE: Separate object for 4c and DF ??
+JDFT: Jotunn DFT functional object
 """
-Base.@kwdef mutable struct Jint
+Base.@kwdef mutable struct JDFT
+    manual::Bool
+    hybrid::Bool
+    libxc_functional::Any
+    functional_rung::Int64
+    alpha::Float64=0.0 #HF exchange
+    #For manual=True, manual_func distinguishes between options
+    manual_func::String="LDA"
+end
+
+"""
+Jint_HF: Jotunn integral struct in sparse form for RHF/UHF
+"""
+Base.@kwdef mutable struct Jint_HF
     #1-electron integrals
     Hcore::Matrix{Float64}
+    S::Matrix{Float64}
+    S_minhalf::Matrix{Float64}
     #TWO-electron integrals
     #Original unique list of integral indices from GaussianBasis but with 1-indexing
     unique_indices::Vector{NTuple{4, Int16}}=[]
@@ -422,13 +567,92 @@ Base.@kwdef mutable struct Jint
     bset::BasisSet
     bset_atom_mapping::Vector{Int64}
     bf_atom_shell_map::Vector{Tuple{Int64, Int64}}
-    #Gridpoints (only used by DFT or density generation)
-    gridpoints::Vector{Any}=[]
-    gridweights::Vector{Any}=[]
+    mlvalues::Vector{Int64}
+    lvalues::Vector{Int64}
+    #Gridpoints (used for density generation in HF)
+    gridpoints::Vector{Tuple{Float64, Float64, Float64}}=[]
+    gridweights::Vector{Float64}=[]
+    #Pre-calculated basis function values at gridpoints
+    BFvalues::Array{Float64}=[]
+    ∇BFvalues::Array{Float64}=[] #derivative of BF values at gridpoints
+    #
+    DFT::Nothing
+    E_xc::Float64=0.0
 end
 
 """
-Jint: Jotunn integral struct in 4-rank form. Rarely used.
+Jint_KS: Jotunn integral struct in sparse form
+"""
+Base.@kwdef mutable struct Jint_KS
+    #1-electron integrals
+    Hcore::Matrix{Float64}
+    S::Matrix{Float64}
+    S_minhalf::Matrix{Float64}
+    #TWO-electron integrals
+    #Original unique list of integral indices from GaussianBasis but with 1-indexing
+    unique_indices::Vector{NTuple{4, Int16}}=[]
+    #Integral values
+    values::Vector{Float64}=[]
+    length::Int64=0
+    #Basis set object and data
+    bset::BasisSet
+    bset_atom_mapping::Vector{Int64}
+    bf_atom_shell_map::Vector{Tuple{Int64, Int64}}
+    mlvalues::Vector{Int64}
+    lvalues::Vector{Int64}
+    #Gridpoints (only used by DFT or density generation)
+    gridpoints::Vector{Tuple{Float64, Float64, Float64}}=[]
+    gridweights::Vector{Float64}=[]
+    #Pre-calculated basis function values at gridpoints
+    BFvalues::Array{Float64}=[]
+    ∇BFvalues::Array{Float64}=[] #derivative of BF values at gridpoints
+    #DFT functional
+    DFT::JDFT
+    E_xc::Float64=0.0
+    E_xc_⍺::Float64=0.0 #only used in UKS
+    E_xc_β::Float64=0.0 #only used in UKS
+    J::Array{Float64}=[]
+    N_⍺::Float64=0.0
+    N_β::Float64=0.0
+end
+
+"""
+Jint_hybridKS: Jotunn integral struct in sparse form for hybrid Kohn-Sham
+"""
+Base.@kwdef mutable struct Jint_hybridKS
+    #1-electron integrals
+    Hcore::Matrix{Float64}
+    S::Matrix{Float64}
+    S_minhalf::Matrix{Float64}
+    #TWO-electron integrals
+    #Original unique list of integral indices from GaussianBasis but with 1-indexing
+    unique_indices::Vector{NTuple{4, Int16}}=[]
+    #Integral values
+    values::Vector{Float64}=[]
+    length::Int64=0
+    #Basis set object and data
+    bset::BasisSet
+    bset_atom_mapping::Vector{Int64}
+    bf_atom_shell_map::Vector{Tuple{Int64, Int64}}
+    mlvalues::Vector{Int64}
+    lvalues::Vector{Int64}
+    #Gridpoints (only used by DFT or density generation)
+    gridpoints::Vector{Tuple{Float64, Float64, Float64}}=[]
+    gridweights::Vector{Float64}=[]
+    #Pre-calculated basis function values at gridpoints
+    BFvalues::Array{Float64}=[]
+    ∇BFvalues::Array{Float64}=[] #derivative of BF values at gridpoints
+    #DFT functional
+    DFT::JDFT
+    E_xc::Float64=0.0
+    N_⍺::Float64=0.0
+    N_β::Float64=0.0
+end
+
+"""
+Jint: Jotunn integral struct in 4-rank form for RHF/UHF. Rarely used. 
+Only kept for RHF speed-comparisons for now
+To be deleted
 """
 Base.@kwdef mutable struct Jint_4rank
     #1-electron integrals
@@ -439,15 +663,65 @@ Base.@kwdef mutable struct Jint_4rank
     bset::BasisSet
     bset_atom_mapping::Vector{Int64}
     bf_atom_shell_map::Vector{Tuple{Int64, Int64}}
+    mlvalues::Vector{Int64}
+    lvalues::Vector{Int64}
     #Gridpoints (only used by DFT or density generation)
-    gridpoints::Vector{Any}=[]
-    gridweights::Vector{Any}=[]
+    gridpoints::Vector{Tuple{Float64, Float64, Float64}}=[]
+    gridweights::Vector{Float64}=[]
+    #Pre-calculated basis function values at gridpoints
+    BFvalues::Array{Float64}=[]
+    ∇BFvalues::Array{Float64}=[] #derivative of BF values at gridpoints
 end
 
-"""
-JDFT: Jotunn DFT functional object
-"""
-Base.@kwdef mutable struct JDFT
-    name::String
-    hybrid::Bool
+
+
+
+#Calculate energy function with multiple methods (multiple dispatch)
+#Dispatches based on type of integrals object and the number of P,F matrices provided (R vs. U)
+#RHF/RKS versions
+##################
+function calc_energy(E_ZZ::Float64,integrals::Jint_HF,F::Matrix{Float64},P::Matrix{Float64})
+    return E_ZZ + 0.5 * tr((integrals.Hcore+F)*P)
 end
+#RHF-4c version (to be deleted)
+function calc_energy(E_ZZ::Float64,integrals::Jint_4rank,F::Matrix{Float64},P::Matrix{Float64})
+    return E_ZZ + 0.5 * tr((integrals.Hcore+F)*P)
+end
+#RKS version
+function calc_energy(E_ZZ::Float64,integrals::Jint_KS,F::Matrix{Float64},P::Matrix{Float64})
+    println("integrals.E_xc:", integrals.E_xc)
+    #return E_ZZ + 0.5 * tr((integrals.Hcore+integrals.Hcore+integrals.J)*P) + integrals.E_xc
+    # Nuc-repulsion + Hcore + J + Exc
+    return E_ZZ + tr(integrals.Hcore*P) + 0.5 * tr(integrals.J*P) + integrals.E_xc
+end
+#RKS-hybrid version
+#function calc_energy(E_ZZ::Float64,integrals::Jint_hybridKS,F::Matrix{Float64},P::Matrix{Float64})
+#    return E_ZZ + 0.5 * tr((integrals.Hcore+integrals.Hcore+integrals.J)*P) + integrals.E_xc
+#end
+
+
+
+#UHF/UKS versions
+##################
+#UHF
+function calc_energy(E_ZZ::Float64,integrals::Jint_HF,F_⍺::Matrix{Float64},
+    P_⍺::Matrix{Float64},F_β::Matrix{Float64},P_β::Matrix{Float64})
+    return E_ZZ + 0.5 * tr((integrals.Hcore+F_⍺)*P_⍺) + 0.5 * tr((integrals.Hcore+F_β)*P_β)  #Calculate energy
+end
+#UHF-4c version (to be deleted)
+function calc_energy(E_ZZ::Float64,integrals::Jint_4rank,F_⍺::Matrix{Float64},
+    P_⍺::Matrix{Float64},F_β::Matrix{Float64},P_β::Matrix{Float64})
+    return E_ZZ + 0.5 * tr((integrals.Hcore+F_⍺)*P_⍺) + 0.5 * tr((integrals.Hcore+F_β)*P_β)  #Calculate energy
+end
+#UKS
+function calc_energy(E_ZZ::Float64,integrals::Jint_KS,F_⍺::Matrix{Float64},
+    P_⍺::Matrix{Float64},F_β::Matrix{Float64},P_β::Matrix{Float64})
+    P=P_⍺+P_β
+    return E_ZZ + tr(integrals.Hcore*P) + 0.5 * tr(integrals.J*P) + integrals.E_xc
+    #return E_ZZ + 0.5 * tr((integrals.Hcore+F_⍺)*P_⍺) + 0.5 * tr((integrals.Hcore+F_β)*P_β) #Calculate energy
+end
+#UKS-hybrid version
+#function calc_energy(E_ZZ::Float64,integrals::Jint_hybridKS,F_⍺::Matrix{Float64},
+#    P_⍺::Matrix{Float64},F_β::Matrix{Float64},P_β::Matrix{Float64})
+#    return E_ZZ + 0.5 * tr((integrals.Hcore+F_⍺)*P_⍺) + 0.5 * tr((integrals.Hcore+F_β)*P_β)  #Calculate energy
+#end

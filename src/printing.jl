@@ -60,7 +60,7 @@ function print_program_header(printlevel)
         print(Crayon(foreground = :blue, bold = true), "                   JOTUNN\n",Crayon(reset=true))
         print(Crayon(foreground = :white, bold = false), "a simple quantum chemistry program in Julia\n",Crayon(reset=true))
         print(Crayon(foreground = :white, bold = true), "="^50*"\n",Crayon(reset=true))
-        print(Crayon(foreground = :yellow, bold = true), "\njSCF: a RHF/UHF program\n",Crayon(reset=true))
+        print(Crayon(foreground = :yellow, bold = true), "\njSCF: a HF/DFT program\n",Crayon(reset=true))
     end
 end
 
@@ -126,7 +126,7 @@ function iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,
         print("Max-DP: ",Crayon(foreground = colorvalue_threshold(abs(P_MaxE),maxDP_threshold)), "$P_MaxE ",
             Crayon(reset=true)," (threshold: $maxDP_threshold)\n")
         #[F,P] commut
-        println("FP_comm:", FP_comm)
+        #println("FP_comm:", FP_comm)
         println("Max[F,P]: ", maximum(FP_comm))
         rms_comm = sqrt(sum(x -> x*x, FP_comm) / length(FP_comm))
         println("RMS[F,P]: ", rms_comm)
@@ -151,19 +151,24 @@ end
 """
 print_energy_contributions: Print energy contributions if SCF converged
 """
-function print_energy_contributions(energy,Hcore,F,P,T,E_ZZ)
-    #Printing final energy contributions
+function print_energy_contributions(energy,Hcore,P,T,E_ZZ,E_xc)
     one_elec_E=tr(Hcore*P)
-    two_elec_E=0.5*tr((F-Hcore)*P)
+    #two_elec_E=0.5*tr((F-Hcore)*P) Only applicable to HF
+    two_elec_E=energy-one_elec_E
     kin_energy=tr(T*P)
     pot_energy=energy-kin_energy
     virial_ratio=-pot_energy/kin_energy
     energies=[energy,E_ZZ,energy-E_ZZ,one_elec_E,two_elec_E,kin_energy,pot_energy,virial_ratio]
     labels=["Total energy","Nuclear repulsion","Electronic energy","1-electron energy","2-electron energy",
         "Kinetic energy","Potential energy","Virial ratio"]
+    if E_xc != nothing
+        push!(energies,E_xc)
+        push!(labels, "XC energy")
+    end
     data=hcat(labels,energies)
-    pretty_table(data; header=["Energy contributions", "E(Eh)"], crop=:none, body_hlines = [7],
+    pretty_table(data; header=["Energy contributions", "E(Eh)"], crop=:none, 
         formatters = ft_printf("%14.8f", [2]))
+        #body_hlines = [7],
     #@printf("Virial ratio: %.4f\n", virial_ratio)
 end
 
@@ -271,16 +276,36 @@ function print_MO_energies(occ_⍺, occ_β, mos_⍺, mos_β)
         highlighters = (h1, h2), formatters = ft_printf("%12.4f", [3,4,6,7]))
 end
 
+
+"""
+print_matrices: print m
+"""
+function print_1_elmatrices(T,V,Hcore,S,C,P)
+    println("T:")
+    print_matrix(T)
+    println("V:")
+    print_matrix(V)
+    println("Hcore:")
+    print_matrix(Hcore)
+    println("S:")
+    print_matrix(S)
+    println("C:")
+    print_matrix(C)
+    println("P:")
+    print_matrix(P)
+end
+
 """
 write_matrices: write multiple matrices to disk
 """
-function write_matrices(F,C,P)
+function write_matrices(F,C,P,S)
     println("Writing current Fock matrix to disk: Fmatrix")
     println("Printing current MO matrix to disk: Cmatrix")
     println("Printing current P matrix to disk: Pmatrix")
     write_matrix_to_file(F,"Fmatrix")
     write_matrix_to_file(C,"Cmatrix")
     write_matrix_to_file(P,"Pmatrix")
+    write_matrix_to_file(S,"Smatrix")
 end
 
 """
@@ -292,4 +317,12 @@ function write_matrix_to_file(X,name)
         #writedlm(io, X)
         pretty_table(io,X; header=[string(i) for i in 1:size(X)[2]], tf = tf_matrix, show_row_number = true)
     end
+end
+
+"""
+print_matrix: pretty print matrix
+"""
+function print_matrix(X)
+    pretty_table(X; header=[string(i) for i in 1:size(X)[2]], tf = tf_matrix, 
+            show_row_number = true, formatters = ft_printf("%10.6f"))
 end

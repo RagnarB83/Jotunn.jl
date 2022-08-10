@@ -314,61 +314,268 @@ end
 
 
 
-############################
-# MANUAL INTEGRALS
-############################
-
-#print("Reading integrals from file")
-#Set basis dimension manually
-#dim=2
-#Read 1-electron integrals
-#println("Reading file: tint.dat")
-#T = read_integrals_from_file("tint.dat",dim)
-#println("Reading file: vint.dat")
-#V = read_integrals_from_file("vint.dat",dim)
-#Read and diagonalize overlap matrix S. Get transformation matrix rij_x
-#println("Reading file: Sint.dat")
-#S = read_integrals_from_file("Sint.dat",dim)
-#Read 2-electron integrals
-#println("Reading file: twoelecint.dat")
-#tei = read_twoel_integrals_from_file("twoelecint.dat", dim) #TODO: Not ready
 
 """
-read_integrals_from_file: Reading 1-electron integrals from file, e.g. vint.dat
+create_ml_values: Create lists of all m_l values for each basis function.
 """
-function read_integrals_from_file(file,dim)
-    M=zeros(dim,dim)
-    for (count,line) in enumerate(eachline(file))
-        splitline=split(line)
-        index1=parse(Int64,splitline[1])
-        index2=parse(Int64,splitline[2])
-        val=parse(Float64,splitline[3])
-        M[index1,index2] = val
-        if index1 != index2
-            M[index2,index1] = val
+function create_ml_values(bset)
+    mlvalues=[]
+    for atom in 1:bset.natoms
+        for shell in bset[atom]
+            for i in shell.l:-1:-shell.l
+            #for i in -shell.l:1:shell.l
+                push!(mlvalues,i) 
+            end
         end
     end
-    return M
+    return mlvalues
 end
 
 """
-read_twoel_integrals_from_file: Reading 2-electron integrals from file
+create_l_values: Create lists of all angmom l values for each basis function.
 """
-#TODO: UNFINISHED
-function read_twoel_integrals_from_file(file,dim)
-    M=zeros(dim*2,dim*2)
-    #X=zeros(dim,dim,dim,dim)
-    for (count,line) in enumerate(eachline(file))
-        println("line:", line)
-        splitline=split(line)
-        numcols=length(splitline)
-        val=parse(Float64,splitline[numcols])
-        indices=[parse(Int64,i) for i in splitline[1:end-1]]
-        println("indices:", indices)
-        println("val:", val)
-        
-        exit()
-        #M[index1,index2] = 
+function create_l_values(bset)
+    lvalues=[]
+    for atom in 1:bset.natoms
+        for shell in bset[atom]
+            for i in shell.l:-1:-shell.l
+                push!(lvalues,shell.l)
+            end
+        end
     end
-    return M
+    return lvalues
+end
+
+"""
+get_bf: For basis function i, get GB shell object, atom-position of that bf and ml value.
+"""
+function get_bf(integrals,i)
+    #Get atom and shell indices for bf i
+    atom_shell_i_index=integrals.bf_atom_shell_map[i] #(atomindex,shell) for bf i
+    atom_i = atom_shell_i_index[1] #atom-index that i belongs to
+    atom_i_xyz=integrals.bset.atoms[atom_i].xyz
+    shell_i = integrals.bset[atom_i][atom_shell_i_index[2]] #Get shell for i
+    m_i=integrals.mlvalues[i]
+    return shell_i, atom_i_xyz, m_i
+end
+
+"""
+Evaluate basis function at gridpoint in spherical harmonics.
+NOTE: Incomplete, have not figured out angular part
+See: https://pyscf.org/_modules/pyscf/gto/mole.html#cart2sph
+"""
+function basisfunc_eval_sph(shell,gp,atom_xyz,m)
+    #Gridpoint XYZ position relative to atom in Bohrs
+    x = gp[1] - (atom_xyz[1]*1.88973)
+    y = gp[2] - (atom_xyz[2]*1.88973)
+    z = gp[3] - (atom_xyz[3]*1.88973)
+    #println("gridpoint xyz in Bohr: $x  $y  $z")
+    #Simple normalization from GaussianBasis (angular momenta already incoporated into coefficients)
+    #N_sp=sqrt(1/(4pi))
+    l=shell.l
+    if shell.l == 0
+        #N_sp=1.0
+        N_sp=sqrt(1/(4*pi)) #0.282094791773878143
+    elseif shell.l == 1
+        N_sp=0.488602511902919921*m
+        #if m == 1
+        #    N_sp=0.488602511902919921
+        #    #N_sp=sqrt(1/(4*pi))
+        #elseif m== 0
+        #    N_sp=sqrt(1/(4*pi)) #0.282094791773878143
+        #else
+        #    N_sp=sqrt(1/(4*pi)) #0.282094791773878143
+        #end
+            #N_sp=sqrt((2*l+1)/(4*pi)*sqrt((factorial(l-abs(m)))/factorial(l+abs(m))))
+        #println("m: $m")
+        #N_sp=1.0
+        #N_sp=0.2102
+        #N_sp=0.28
+        #N_sp=sqrt(1/(4*pi))
+        #N_sp=((-1)^m)*sqrt(((2*l+1)*factorial((l-abs(m))))/(4*pi*factorial((l+abs(m)))))
+        #N_sp=sqrt(1/(4*pi))
+        #N_sp=(-1)^(m)*sqrt(((1))/(4*pi))
+        #N_sp=sqrt((2*l+1)/(4*pi)*sqrt((factorial(l-m))/factorial(l+m)))
+        #println("N_sp:", N_sp)
+    elseif shell.l == 2
+        #N_sp=sqrt(5/(16*pi))
+        #N_sp=0.21157109383040862 #sqrt(1/(4*pi))*3/4
+        N_sp=0.2102 #between this and 0.2103
+        #N_sp=sqrt(1/(4*pi))
+    #    l=shell.l
+        #https://www2.atmos.umd.edu/~dkleist/docs/shtns/doc/html/spec.html
+        #N_sp=sqrt((2*l+1)/(4*pi)*sqrt((factorial(l-m))/factorial(l+m)))
+        #N_sp=(-1)^(m)*sqrt(((1))/(4*pi))
+        #N_sp=0.745*sqrt(1/(4pi))
+        #N_sp=sqrt((2*l+1)/(4*pi)*sqrt((factorial(l-abs(m)))/factorial(l+abs(m))))
+    end
+
+    #Actual normalization used
+    #sqrt((2^(2*l+3)*factorial(l+1)*(2*a)^(l+1.5))/(factorial(2*l+2)*sqrt(pi)))
+
+    #N_sp=sqrt((2*l+1)/(4*pi)*sqrt((factorial(l-m))/factorial(l+m)))
+    #N_sp=((-1)^m)*sqrt(((2*l+1)*factorial((l-m)))/(4*pi*factorial((l+m))))
+    #N_sp=sqrt((2*l+1)/(4*pi)*sqrt((factorial(l-abs(m)))/factorial(l+abs(m))))
+    #if shell.l == 2
+    #    blox=3
+    #else
+    blox=shell.l
+    #end
+    #Looping over primitives
+    val=0.0
+    for (coef,⍺) in zip(shell.coef,shell.exp)
+        val+= ((x+y+z)^blox) * coef * N_sp * exp(-1*⍺*(x^2+y^2+z^2))
+    end
+    return val
+end
+
+"""
+basisfunc_eval2: Doing BF evaluation differently
+"""
+function basisfunc_eval2(shell,gp,atom_xyz,m)
+    #Gridpoint XYZ position relative to atom in Bohrs
+    x = gp[1] - (atom_xyz[1]*1.8897161646321)
+    y = gp[2] - (atom_xyz[2]*1.8897161646321)
+    z = gp[3] - (atom_xyz[3]*1.8897161646321)
+
+    r2=(x^2+y^2+z^2)
+
+    val=0.0
+    #S-function
+    if shell.l == 0
+        i=0;j=0;k=0
+        N=0.282094791773878143
+        #Looping over primitives
+        for (coef,⍺) in zip(shell.coef,shell.exp)
+            val += N * coef * exp(-⍺*r2)
+        end
+        return val
+    #P-function
+    elseif shell.l == 1
+        N=0.488602511902919921
+        if m == 1
+            #i=0;j=0;k=0
+            i=0;j=1;k=0
+        elseif m == 0
+            #i=0;j=0;k=0
+            i=0;j=0;k=1
+        elseif m == -1
+            #i=0;j=0;k=0
+            i=1;j=0;k=0
+        end
+        #if m == 1
+        #    i=1;j=0;k=0
+        #elseif m==0
+        #    i=0;j=1;k=0
+        #elseif m==-1
+        #    i=0;j=0;k=1
+        #end
+        #Looping over primitives
+        for (coef,⍺) in zip(shell.coef,shell.exp)
+            val += N * x^i * y^j * z^k * coef * exp(-⍺*r2)
+            #val += N * (x+y+z)^shell.l * coef * exp(-⍺*r2)
+        end
+        return val
+    #D-function
+    elseif shell.l == 2
+        N=0.6307831305050401 # sqrt(5/(4pi))
+        #https://www.theochem.ru.nl/~pwormer/Knowino/knowino.org/wiki/Gaussian_type_orbitals.html
+        #N=1.145*0.488602511902919921
+        if m == 2 #xy
+            M=1.7320508075688772 #sqrt(3)
+            i=1;j=1;k=0
+            #Looping over primitives
+            for (coef,⍺) in zip(shell.coef,shell.exp)
+                val += N * M * x*y * coef * exp(-⍺*r2)
+                #val += N * M * x^i*y^j*z^k* coef * exp(-⍺*r2)
+            end
+        return val
+        elseif m==1 #yz
+            M=1.7320508075688772 #sqrt(3)
+            i=0;j=1;k=1
+            #Looping over primitives
+            for (coef,⍺) in zip(shell.coef,shell.exp)
+                val += N * M * y*z * coef * exp(-⍺*r2)
+                #val += N * M * x^i*y^j*z^k* coef * exp(-⍺*r2)
+            end
+        elseif m==0 #xz
+            M=1.7320508075688772 #sqrt(3)
+            i=1;j=0;k=1
+            #Looping over primitives
+            for (coef,⍺) in zip(shell.coef,shell.exp)
+                val += N * M * x*z * coef * exp(-⍺*r2)
+                #val += N * M * x^i*y^j*z^k* coef * exp(-⍺*r2)
+            end
+        elseif m==-1 #3*z2-r^2
+            M=0.5
+            #Looping over primitives
+            for (coef,⍺) in zip(shell.coef,shell.exp)
+                val+= N * M * (3*z^2-r2) * coef * exp(-⍺*r2)
+            end
+            return val
+        elseif m==-2 # x2-y2
+            M=0.8660254037844386 #0.5*sqrt(3)
+            #Looping over primitives
+            for (coef,⍺) in zip(shell.coef,shell.exp)
+                val+= N * M * (x^2-y^2) * coef * exp(-⍺*r2)
+            end
+            return val
+        else
+            println("WTF!")
+            exit()
+        end
+    #F-function
+    #http://www.rsc.org/suppdata/c7/cp/c7cp00194k/c7cp00194k1.pdf
+    elseif shell.l == 3
+        #TODO: Incomplete. returning 0.0 for now
+        #println("Warning: f-basis functions barely supported. Result will be inaccurate")
+        return 0.0
+    #G-function
+    elseif shell.l == 4
+        #TODO: Incomplete. returning 0.0 for now
+        #println("Warning: g-basis functions barely supported. Result will be inaccurate")
+        return 0.0
+    else
+        println("unsupported angmom")
+        exit()
+        
+    end
+
+    return val
+end
+
+
+"""
+BFvalues_calc:Precalculate basisfunction values at gridpoints
+Creates array of size numgridpoints x numbfs
+
+TODO: Derivative
+
+TODO: Add exclamation mark
+"""
+function BFvalues_calc(integrals)
+    dim=integrals.bset.nbas
+
+    BF=zeros(length(integrals.gridpoints),dim)
+    #∇BF=zeros(length(integrals.gridpoints),dim)
+    for (i,gp) in enumerate(integrals.gridpoints)
+        for µ in 1:dim
+            #Get basis functions µ
+            shell_µ,atom_µ_xyz,m_µ = get_bf(integrals,µ)
+
+            #Now get the basis function value at gridpoint position
+            #ϕ_µ = basisfunc_eval_sph(shell_µ,gp,atom_µ_xyz,m_µ)  DOES NOT WORK
+            ϕ_µ = basisfunc_eval2(shell_µ,gp,atom_µ_xyz,m_µ) #DOES WORK
+            #ϕ_µ = basisfunc_eval_libcint(shell_µ,gp,atom_µ_xyz,m_µ) #TODO: Call libcint routine directly
+
+            #Add to array
+            BF[i,µ] = ϕ_µ
+
+            #Derivative of BF         TODO
+            #∇BF[i,µ] =
+
+        end
+    end
+    integrals.BFvalues=BF
+    #integrals.∇BFvalues=∇BF
 end
