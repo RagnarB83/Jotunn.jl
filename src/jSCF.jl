@@ -14,7 +14,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
     lshift_thresh::Float64=0.01,damping::Bool=true, damping_val::Float64=0.4, 
     damping_thresh::Float64=0.01, diis::Bool=true, diis_size::Int64=5, diis_startiter::Int64=4, 
     DIISBfac::Float64=1.05, diis_error_conv_threshold::Float64=5e-7, calc_density::Bool=false,
-    printlevel::Int64=1, nopop::Bool=false)
+    printlevel::Int64=1, nopop::Bool=false, iDMFT_kappa=0.1109136,iDMFT_b=0.18121047 )
 
     #Beginning of time block
     totaltime=@elapsed begin
@@ -51,6 +51,19 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
     if WFtype == "RHF"
         #Num occ orbitals in RHF
         numoccorbs=Int64(num_el/2)
+        #Array of occupation numbers
+        orb_occupations=makeoccupationarray(numoccorbs,dim,2.0)
+        #
+        unpaired_electrons=0
+        DFTobj=nothing
+        grid=false
+        Intobj=Jint_HF
+    elseif WFtype == "i-DMFT"
+        #Num occ orbitals in RHF
+        numoccorbs=Int64(num_el/2)
+        #Array of occupation numbers
+        orb_occupations=makeoccupationarray(numoccorbs,dim,2.0)
+        #
         unpaired_electrons=0
         DFTobj=nothing
         grid=false
@@ -60,6 +73,8 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
         #restricted Kohn-Sham
         #Num occ orbitals in RHF
         numoccorbs=Int64(num_el/2)
+        #Array of occupation numbers
+        orb_occupations=makeoccupationarray(numoccorbs,dim,2.0)
         unpaired_electrons=0
         println("RKS chosen.")
         println("functional: $functional and libxc_keyword: $libxc_keyword")
@@ -139,6 +154,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
         print_system(num_el,fragment.prettyformula,E_ZZ,fragment.charge,fragment.mult,fragment.numatoms,unpaired_electrons)
     end
     print_geometry(fragment,printlevel)
+
     #############################
     # BASIS SET
     #############################
@@ -243,6 +259,11 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
         if WFtype=="RHF" || WFtype=="RKS"
             C = compute_core_guess(Hcore,S_minhalf)
             P = makeP(C, dim, numoccorbs) #Calculate new P from C
+            println("P:", P)
+            #Make density matrix using array of occupation numbers instead
+            #NOTE: Useful for i-DMFT
+            P2 = makeP2(C, dim, numoccorbs, orb_occupations) #Calculate new P from C
+            println("P2:", P2)
         else
             #UHF or UKS
             #A=zeros(dim,dim)
@@ -340,7 +361,24 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
             C = S_minhalf*C′ # Get C from C'
 
             P_old=deepcopy(P) #Keep copy of old P
-            P = makeP(C, dim, numoccorbs) #Calculate new P from C
+
+            if WFtype == "i-DMFT"
+                #i-DMFT:
+                #iDMFT_b=0.18121047 #fitted. Just used to shift energy
+                #Correct??
+                mu=[e+iDMFT_kappa*(ln(n)-ln(1-n)) for (e,n) in zip(eps,nocc)]
+                print("Mu:", mu)
+                #Update occupations
+                orb_occupations=[1/(1+exp((e-mu)/iDMFT_kappa)) for e in eps]
+                print("New orb_occupations:", orb_occupations)
+                #Update P from new C and new orb_occupations
+                P2 = makeP2(C, dim, numoccorbs, orb_occupations)
+            else
+                #Switch once confirmed
+                #P = makeP2(C, dim, numoccorbs, orb_occupations)
+                P = makeP(C, dim, numoccorbs) #Calculate new P from C
+            end
+
             if printlevel > 2 write_matrices(F,C,P,S) end
         else
             #Possible damping of P matrices before making Fock
@@ -471,6 +509,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
         if WFtype=="RHF" || WFtype=="RKS"
 
             #Orbitals
+            #TODO: Needed??
             occupations=makeoccupationarray(numoccorbs,dim,2.0) #Occupation array
             #Mulliken
             charges = mulliken(S,P,bset,fragment.elems)
