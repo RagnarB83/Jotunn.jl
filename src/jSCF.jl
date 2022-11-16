@@ -31,6 +31,28 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
     end
 
     #############################
+    # BASIS SET
+    #############################
+    #Setting up 1-electron and 2-electron integrals
+    print_if_level("Integrals provided via GaussianBasis.jl library",1,printlevel)  
+    #Basis set object creation by GaussianBasis
+    bset = basis_set_create(basisset,fragment.elems,fragment.coords; basisfile=basisfile,printlevel)
+    dim = bset.nbas
+    #Simple array of atom indices that maps onto bfs
+    bset_atom_mapping = bf_atom_mapping(bset)
+    #Create array of tuples with atom,shell info for each BF
+    bf_atom_shell_map=create_bf_shell_map(bset)
+    # Create array of l and ml values
+    mlvalues=create_ml_values(bset)
+    lvalues=create_l_values(bset)
+
+    #Print basis set information here
+    if printlevel >0
+        #println("No. contracted basis functions: $dim")
+        println(GaussianBasis.string_repr(bset))
+    end
+
+    #############################
     # BASIC SYSTEM SETUP
     #############################
     #Num. electrons and nuc-nuc repulsion from total charge and nuclear charges
@@ -63,6 +85,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
         numoccorbs=Int64(num_el/2)
         #Array of occupation numbers
         orb_occupations=makeoccupationarray(numoccorbs,dim,2.0)
+        println("Initial orb_occupations:", orb_occupations)
         #
         unpaired_electrons=0
         DFTobj=nothing
@@ -155,27 +178,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
     end
     print_geometry(fragment,printlevel)
 
-    #############################
-    # BASIS SET
-    #############################
-    #Setting up 1-electron and 2-electron integrals
-    print_if_level("Integrals provided via GaussianBasis.jl library",1,printlevel)  
-    #Basis set object creation by GaussianBasis
-    bset = basis_set_create(basisset,fragment.elems,fragment.coords; basisfile=basisfile,printlevel)
-    dim = bset.nbas
-    #Simple array of atom indices that maps onto bfs
-    bset_atom_mapping = bf_atom_mapping(bset)
-    #Create array of tuples with atom,shell info for each BF
-    bf_atom_shell_map=create_bf_shell_map(bset)
-    # Create array of l and ml values
-    mlvalues=create_ml_values(bset)
-    lvalues=create_l_values(bset)
 
-    #Print basis set information here
-    if printlevel >0
-        #println("No. contracted basis functions: $dim")
-        println(GaussianBasis.string_repr(bset))
-    end
     #############################
     # INTEGRALS
     #############################
@@ -256,15 +259,17 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
     #Create initial guess for density matrix
     print_if_level("Providing guess: $guess",1,printlevel)
     if guess == "hcore"
-        if WFtype=="RHF" || WFtype=="RKS"
+        if WFtype=="RHF" || WFtype=="RKS" || WFtype=="i-DMFT"
             C = compute_core_guess(Hcore,S_minhalf)
-            P = makeP(C, dim, numoccorbs) #Calculate new P from C
-            println("P:", P)
+            #P = makeP(C, dim, numoccorbs) #Calculate new P from C
+            #println("P:", P)
             #Make density matrix using array of occupation numbers instead
             #NOTE: Useful for i-DMFT
-            P2 = makeP2(C, dim, numoccorbs, orb_occupations) #Calculate new P from C
-            println("P2:", P2)
-        else
+            P = makeP2(C, dim, numoccorbs, orb_occupations) #Calculate new P from C
+            #println("P2:", P2)
+            println("Initial orb_occupations: ", orb_occupations)
+            println("Initial P: ", P)
+        elseif WFtype=="UHF" || WFtype=="UKS"
             #UHF or UKS
             #A=zeros(dim,dim)
             #for i in 1:numoccorbs_⍺; A[i,i]=1 end
@@ -282,6 +287,9 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
             P_⍺ = makeP(C, dim, numoccorbs_⍺, 1.0) #Calculate new P from C
             P_β = makeP(C, dim, numoccorbs_β, 1.0) #Calculate new P from C
             P=P_⍺+P_β
+        else
+            println("Unknown WFtype option.")
+            exit()
         end
     else
         println("unknown guess")
@@ -302,13 +310,12 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
     #Initializing some variables that will change during the iterations
     energy_old=0.0; energy=0.0; P_RMS=9999; finaliter=nothing
     Resultsdict=Dict()
-    if WFtype=="RHF" || WFtype=="RKS"
+    if WFtype=="RHF" || WFtype=="RKS" || WFtype=="i-DMFT"
         eps=zeros(dim)
         P_old=deepcopy(P)
     else
         eps_⍺=zeros(dim); eps_β=zeros(dim); 
         P_⍺_old=deepcopy(P_⍺); P_β_old=deepcopy(P_β)
-        
     end
 
     #Initializing levelshift, damping and DIIS settings
@@ -334,7 +341,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
 
     time_scf=@elapsed for iter in 1:maxiter
         if printlevel > 1 print_iteration_header(iter) end
-        if WFtype == "RHF" || WFtype=="RKS"
+        if WFtype == "RHF" || WFtype=="RKS" || WFtype == "i-DMFT"
 
             #Optional damping of P before making Fock
             P = damping_control(P,P_old,damping,damping_val,P_RMS,rmsDP_threshold,iter,printlevel; turnoff_threshold=damping_thresh)
@@ -363,20 +370,33 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
             P_old=deepcopy(P) #Keep copy of old P
 
             if WFtype == "i-DMFT"
+                println("i-DMFT active")
                 #i-DMFT:
                 #iDMFT_b=0.18121047 #fitted. Just used to shift energy
                 #Correct??
-                mu=[e+iDMFT_kappa*(ln(n)-ln(1-n)) for (e,n) in zip(eps,nocc)]
-                print("Mu:", mu)
+                #mu=[e+iDMFT_kappa*(log(n)-log(1-n)) for (e,n) in zip(eps,orb_occupations)]
+                #print("Mu:", mu)
+                mu=-0.1
                 #Update occupations
-                orb_occupations=[1/(1+exp((e-mu)/iDMFT_kappa)) for e in eps]
+                println("Old orb_occupations:", orb_occupations)
+                
+                #sum([1/(1+exp((e-mu)/iDMFT_kappa)) for e in eps])
+                println("eps:", eps)
+                println("iDMFT_kappa:", iDMFT_kappa)
+                println("energy:", energy)
+                #for mu in [0.2921,0.2922,0.2923,0.2924]
+                    orb_occupations=[1/(1+exp((e-mu)/iDMFT_kappa)) for e in eps]
+                    println("mu: $mu orb_occupations: $orb_occupations  Sum: $(sum(orb_occupations))")
+                #end
                 print("New orb_occupations:", orb_occupations)
+                print("New orb_occupations sum :", sum(orb_occupations))
+                exit()
                 #Update P from new C and new orb_occupations
-                P2 = makeP2(C, dim, numoccorbs, orb_occupations)
+                P = makeP2(C, dim, numoccorbs, orb_occupations)
             else
                 #Switch once confirmed
-                #P = makeP2(C, dim, numoccorbs, orb_occupations)
-                P = makeP(C, dim, numoccorbs) #Calculate new P from C
+                P = makeP2(C, dim, numoccorbs, orb_occupations)
+                #P = makeP(C, dim, numoccorbs) #Calculate new P from C
             end
 
             if printlevel > 2 write_matrices(F,C,P,S) end
@@ -506,11 +526,13 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
         end
 
     #ORBITALS AND POPULATION ANALYSIS
-        if WFtype=="RHF" || WFtype=="RKS"
+        if WFtype=="RHF" || WFtype=="RKS" || WFtype == "i-DMFT"
 
             #Orbitals
             #TODO: Needed??
-            occupations=makeoccupationarray(numoccorbs,dim,2.0) #Occupation array
+            #occupations=makeoccupationarray(numoccorbs,dim,2.0) #Occupation array
+            #Now defined from beginning
+            occupations=orb_occupations
             #Mulliken
             charges = mulliken(S,P,bset,fragment.elems)
             P_⍺_β=zeros(dim,dim) #dummy spin-density
@@ -545,6 +567,18 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
     #####################################
     if printlevel > 0
         print_final_results(energy,fragment,num_el,basisset,WFtype,fock_algorithm,finaliter)
+        if WFtype == "i-DMFT"
+            println("iDMFT_kappa: ",iDMFT_kappa)
+            println("iDMFT_b: ", iDMFT_b)
+            println("Final occupations: ", orb_occupations)
+            println("Final sum of occupations:", sum(orb_occupations))
+            S_term = -sum([n*log(n)+(1-n)*log(1-n) for n in orb_occupations])
+            println("S_term: ", S_term)
+            E_cum = -iDMFT_kappa*S_term-iDMFT_b
+            println("E_cum: ", E_cum)
+            DMFT_energy= energy + E_cum
+            println("Final i-DMFT energy: ", DMFT_energy)
+        end
     end
     #Gathering results into Dict and returning.
     #TODO: Add more here. 

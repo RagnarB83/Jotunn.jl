@@ -114,6 +114,112 @@ function Fock(P,dim,integrals::Jint_HF)
 end
 
 """
+Fock_loop_sparse_DMFT: Multiple matrix-element update per unique set of indices
+For i-DMFT
+"""
+function Fock(P,dim,integrals::Jint_DMFT)
+    #println("Inside RFock for Jint_HF")
+    #- Next combine assignments into simpler ones
+    G = zeros(dim,dim)
+    #Looping over unique sets of indices and values from sparse2e4c
+    
+    @inbounds @fastmath for i in eachindex(integrals.unique_indices)
+        #This is the unique set of indices provided by GaussianBasis/libcint (sparse)
+        µ,ν,λ,σ=integrals.unique_indices[i]
+        value=integrals.values[i] #integral value
+        #Logic to handle Fock matrix contributions for all permutations
+        if µ > ν
+            µν = µ*(µ+1)/2 + ν
+        else
+            µν = ν*(ν+1)/2 + µ
+        end
+        if λ > σ
+            λσ = λ*(λ+1)/2 + σ
+        else
+            λσ = σ*(σ+1)/2 + λ
+        end
+        γµν = µ !== ν
+        γλσ = λ !== σ
+        γxy = µν !== λσ
+
+        #Now adding value to correct matrix element
+        if γµν && γλσ && γxy
+            #println("Case1: e.g. µ!=ν!=c!=d  and 1232 ")
+            G[µ,ν] += 2*P[λ,σ]*value # J µνλσ
+            G[ν,µ] += 2*P[λ,σ]*value # J νµλσ
+            #G[µ,ν] += P[σ,λ]*value # J µνσλ
+            G[λ,σ] += 2*P[µ,ν]*value # J λσµν
+            #G[λ,σ] += P[ν,µ]*value # J λσνµ
+            #G[ν,µ] += P[σ,λ]*value # J νµσλ
+            G[σ,λ] += 2*P[ν,µ]*value # J σλνµ
+            #G[σ,λ] += P[µ,ν]*value # J σλµν
+
+            G[µ,λ] -= 0.5*P[ν,σ]*value # K   µνλσ
+            G[ν,λ] -= 0.5*P[µ,σ]*value # K   νµλσ
+            G[µ,σ] -= 0.5*P[ν,λ]*value # K   µνσλ
+            G[λ,µ] -= 0.5*P[σ,ν]*value # K   λσµν
+            G[λ,ν] -= 0.5*P[σ,µ]*value # K   λσνµ
+            G[ν,σ] -= 0.5*P[µ,λ]*value # K   νµσλ
+            G[σ,ν] -= 0.5*P[λ,µ]*value # K   σλνµ
+            G[σ,µ] -= 0.5*P[λ,ν]*value # K   σλµν
+
+        elseif γλσ && γxy
+            #println("Case2")
+            G[µ,ν] += 2*P[λ,σ]*value # J µνλσ
+            #G[µ,ν] += P[σ,λ]*value # J µνσλ
+            #Strange diis+damp+levelshift fail here
+            G[λ,σ] += P[µ,ν]*value # J λσµν
+            G[σ,λ] += P[ν,µ]*value # J σλνµ
+
+            G[µ,λ] -= 0.5*P[ν,σ]*value # K   µνλσ
+            G[µ,σ] -= 0.5*P[ν,λ]*value # K   µνσλ
+            G[λ,µ] -= 0.5*P[σ,ν]*value # K   λσµν
+            G[σ,ν] -= 0.5*P[λ,µ]*value # K   σλνµ
+        elseif γµν && γxy
+            #println("Case3 (incomplete)")
+            G[µ,ν] += P[λ,σ]*value # J µνλσ
+            G[ν,µ] += P[λ,σ]*value # J νµλσ
+            G[λ,σ] += 2*P[µ,ν]*value # J λσµν
+            #G[λ,σ] += P[ν,µ]*value # J λσνµ
+
+            G[µ,λ] -= 0.5*P[ν,σ]*value # K   µνλσ
+            G[ν,λ] -= 0.5*P[µ,σ]*value # K   νµλσ
+            G[λ,µ] -= 0.5*P[σ,ν]*value # K   λσµν
+            G[λ,ν] -= 0.5*P[σ,µ]*value # K   λσνµ
+
+        elseif γµν && γλσ
+            #println("Case4")
+            G[µ,ν] += 2*P[λ,σ]*value # J µνλσ
+            G[ν,µ] += 2*P[λ,σ]*value # J νµλσ
+            #G[µ,ν] += P[σ,λ]*value # J µνσλ
+            #G[ν,µ] += P[σ,λ]*value # J νµσλ
+
+            G[µ,λ] -= 0.5*P[ν,σ]*value # K   µνλσ
+            G[ν,λ] -= 0.5*P[µ,σ]*value # K   νµλσ
+            G[µ,σ] -= 0.5*P[ν,λ]*value # K   µνσλ
+            G[ν,σ] -= 0.5*P[µ,λ]*value # K   νµσλ
+        elseif γxy #µ=ν; λ=σ µν != λσ
+            #println("Case5: example: 1122 and 2211")
+            G[µ,ν] += P[λ,σ]*value # J µνλσ
+            G[λ,σ] += P[µ,ν]*value # J λσµν
+
+            G[µ,λ] -= 0.5*P[ν,σ]*value # K   µνλσ
+            G[λ,µ] -= 0.5*P[σ,ν]*value # K   λσµν
+        else
+            #println("Case6, Example: 1111. ")
+            G[µ,ν] += P[λ,σ]*value # J µνλσ
+            G[µ,λ] -= 0.5*P[ν,σ]*value # K µνλσ
+        end
+    end
+
+
+    F = integrals.Hcore + G
+    return F
+end
+
+
+
+"""
 Fock_loop_sparse_UHF: Multiple matrix-element update per unique set of indices
 """
 function Fock(Pi,Pj,dim,integrals::Jint_HF,manifold)

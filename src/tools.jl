@@ -41,13 +41,13 @@ function makeP2(C, dim, Norb,nocc)
     P=zeros(dim,dim)
     for µ in 1:dim
         for ν in 1:dim
-            println("µ: $µ and ν:$ν")
+            #println("µ: $µ and ν:$ν")
             for o in 1:Norb
-                println("o: $o")
-                println("C[µ,o]: ", C[µ,o])
-                println("C[ν,o]:", C[ν,o])
+                #println("o: $o")
+                #println("C[µ,o]: ", C[µ,o])
+                #println("C[ν,o]:", C[ν,o])
                 P[µ,ν] += nocc[o]*C[µ,o]*C[ν,o]
-                println("P[µ,ν:", P[µ,ν])
+                #println("P[µ,ν:", P[µ,ν])
             end
         end
     end

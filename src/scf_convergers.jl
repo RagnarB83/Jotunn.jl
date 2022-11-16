@@ -73,21 +73,21 @@ function diis_control(diisobj,F′,energy,FP_comm,iter,printlevel)
         #Throwing out DIIS vector if we are at diis_size
         #NOTE: Throw out high-energy vector instead? or largest error vector
         if length(diisobj.errorvectors) == diisobj.diis_size
-            println("Throwing out before adding")
+            #println("Throwing out before adding")
             if throwout_option == "maxerror"
-                println("diisobj.maxerrors: ", diisobj.maxerrors)
-                println("diisobj.rmserrors: ", diisobj.rmserrors)
+                #println("diisobj.maxerrors: ", diisobj.maxerrors)
+                #println("diisobj.rmserrors: ", diisobj.rmserrors)
                 #Not sure about abs
                 delindex = findmax([abs(i) for i in diisobj.maxerrors])[2]
-                println("Deleting index:", delindex)
+                #println("Deleting index:", delindex)
                 deleteat!(diisobj.errorvectors,delindex)
                 deleteat!(diisobj.Fockmatrices,delindex)
                 deleteat!(diisobj.energies,delindex)
                 deleteat!(diisobj.maxerrors,delindex)
                 deleteat!(diisobj.rmserrors,delindex)
-                println("After DIIS deletion")
-                println("diisobj.maxerrors: ", diisobj.maxerrors)
-                println("diisobj.rmserrors: ", diisobj.rmserrors)
+                #println("After DIIS deletion")
+                #println("diisobj.maxerrors: ", diisobj.maxerrors)
+                #println("diisobj.rmserrors: ", diisobj.rmserrors)
             elseif throwout_option == "oldest"
                 #Deleting first vector (i.e. oldest)
                 diisobj.errorvectors = diisobj.errorvectors[2:end]
@@ -114,7 +114,7 @@ function diis_control(diisobj,F′,energy,FP_comm,iter,printlevel)
 
         #DO DIIS extrapolation if active and as soon as there are enough vectors
         if iter >= diisobj.diis_startiter
-            println("DIIS startiter reached")
+            #println("DIIS startiter reached")
             if length(diisobj.errorvectors) > 1
                 print_if_level("DIIS extrapolation will be performed",2,printlevel)
                 diisobj.diis_flag=true #Now setting DIIS flag to true
