@@ -15,7 +15,7 @@ function mulliken(S,P,bset,elems)
     #Iterating over atom and summing over bfs belonging to atom
     for atom in 1:length(bset.atoms)
         #Number of basis functions for this atom
-        atom_bfs=sum([bset[atom][i].l for i in 1:length(bset[atom])].*2 .+1)
+        atom_bfs = bset.basis_per_atom[atom]
         num_bf_per_atoms[atom] = atom_bfs
         #Sum of diagonal elements for bfs belonging to atom
         total_pop=sum([PS[i,i] for i in j:j+atom_bfs-1])
@@ -37,7 +37,7 @@ function mulliken(S,P,R,bset,elems)
     j=1
     #Iterating over atom and summing over bfs belonging to atom
     for atom in 1:length(bset.atoms)
-        atom_bfs=sum([bset[atom][i].l for i in 1:length(bset[atom])].*2 .+1)
+        atom_bfs = bset.basis_per_atom[atom]
         num_bf_per_atoms[atom] = atom_bfs
         total_pop_P=sum([PS[i,i] for i in j:j+atom_bfs-1])
         total_pop_R=sum([RS[i,i] for i in j:j+atom_bfs-1])

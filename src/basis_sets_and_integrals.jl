@@ -178,7 +178,6 @@ function basis_set_create(basis,elems,coordinates; basisfile="none",printlevel)
     #get coordinates as a multi-linestring (for Molecules.jl):
     coords_string = array_to_string(elems,coordinates)
     if basis == "manual"
-
         #Coords as Molecules atoms object
         atoms = Molecules.parse_string(coords_string)
 
@@ -201,7 +200,6 @@ function basis_set_create(basis,elems,coordinates; basisfile="none",printlevel)
         basisname="basis-from-file"
         #Coords as Molecules atoms object
         atoms = Molecules.parse_string(coords_string)
-
         #0. Read basis set from file into dictionary
         basis_dict = read_basis_file(basisfile,elems,format="orca")
         #Initialize Basis function element dictionary
@@ -275,26 +273,29 @@ bf_atom_mapping: Created simply array (size of basis-set dimension) of atom indi
 i.e. map of which basis-function belongs to which atom
 TODO: Get rid of ?? Since create_bf_shell_map contains same info??
 """
-function bf_atom_mapping(bset)
-    mapping=Int64[]
-    for atom in 1:length(bset.atoms)
-        atom_bfs=sum([bset[atom][i].l for i in 1:length(bset[atom])].*2 .+1)
-        for j in 1:atom_bfs
-            push!(mapping,atom)
-        end
-    end
-    return mapping
-end
+#function bf_atom_mapping(bset)
+#    println("yy")
+#    mapping=Int64[]
+#    for atom in 1:length(bset.atoms)
+#        atom_bfs=sum([bset[atom][i].l for i in 1:length(bset[atom])].*2 .+1)
+#        #atom_bfs=sum([bset[atom][i].l for i in 1:bset.shells_per_atom[atom]].*2 .+1)
+#        for j in 1:atom_bfs
+#            push!(mapping,atom)
+#        end
+#    end
+#    return mapping
+#end
 
 
 """
 create_bf_shell_map: Create array (dim:basis dim) of (atom, shell) tuples,
 i.e. what atom and shell each BF belong to
 """
-function create_bf_shell_map(bset)
+function old_create_bf_shell_map(bset)
     bf_atom_shell_mapping=Tuple{Int64, Int64}[]
     for atom_ind in 1:bset.natoms
         shells = bset[atom_ind]
+        #numshells = bset.shells_per_atom[atom_ind]
         ind=0
         for shell in shells
             angmom=shell.l
@@ -313,6 +314,31 @@ end
 
 
 
+"""
+create_bf_shell_map: Create array (dim:basis dim) of (atom, shell) tuples,
+i.e. what atom and shell each BF belong to
+"""
+function create_bf_shell_map(bset)
+    bf_atom_shell_mapping=Tuple{Int64, Int64}[]
+    #Looping over shells
+    atom_ind=1 #atom-index counter
+    shellcounter=0 #shell-index counter that is reset
+    for (i,shell) in enumerate(bset.basis)
+        shellcounter+=1
+        #if shell index larger than shells per atom
+        if shellcounter > bset.shells_per_atom[atom_ind]
+            atom_ind+=1 #new atom
+            shellcounter=1 #resetting shell counter
+        end
+        for j in 1:2*shell.l+1 #looping over degenerate bfs in shell
+            push!(bf_atom_shell_mapping,(atom_ind,i))
+        end
+    end
+    return bf_atom_shell_mapping
+end
+
+
+
 
 
 """
@@ -320,12 +346,9 @@ create_ml_values: Create lists of all m_l values for each basis function.
 """
 function create_ml_values(bset)
     mlvalues=[]
-    for atom in 1:bset.natoms
-        for shell in bset[atom]
-            for i in shell.l:-1:-shell.l
-            #for i in -shell.l:1:shell.l
-                push!(mlvalues,i) 
-            end
+    for shell in bset.basis
+        for i in shell.l:-1:-shell.l
+            push!(mlvalues,i) 
         end
     end
     return mlvalues
@@ -336,11 +359,9 @@ create_l_values: Create lists of all angmom l values for each basis function.
 """
 function create_l_values(bset)
     lvalues=[]
-    for atom in 1:bset.natoms
-        for shell in bset[atom]
-            for i in shell.l:-1:-shell.l
-                push!(lvalues,shell.l)
-            end
+    for shell in bset.basis
+        for i in shell.l:-1:-shell.l
+            push!(lvalues,shell.l)
         end
     end
     return lvalues

@@ -38,14 +38,16 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
     #Basis set object creation by GaussianBasis
     bset = basis_set_create(basisset,fragment.elems,fragment.coords; basisfile=basisfile,printlevel)
     dim = bset.nbas
-    #Simple array of atom indices that maps onto bfs
-    bset_atom_mapping = bf_atom_mapping(bset)
-    #Create array of tuples with atom,shell info for each BF
+    #bset_atom_mapping = bf_atom_mapping(bset)
+    #Array of tuples with atom,shell info for each BF
     bf_atom_shell_map=create_bf_shell_map(bset)
+    #Simple array of atom indices that maps onto bfs
+    bset_atom_mapping = [j[1] for j in bf_atom_shell_map]
+    
     # Create array of l and ml values
     mlvalues=create_ml_values(bset)
-    lvalues=create_l_values(bset)
-
+    #lvalues=create_l_values(bset)
+    lvalues = [bset.basis[i].l for i in 1:9]
     #Print basis set information here
     if printlevel >0
         #println("No. contracted basis functions: $dim")
@@ -621,6 +623,13 @@ Base.@kwdef mutable struct JDFT
     alpha::Float64=0.0 #HF exchange
     #For manual=True, manual_func distinguishes between options
     manual_func::String="LDA"
+end
+
+"""
+Jint_DMFT: Jotunn DMFT object
+"""
+Base.@kwdef mutable struct Jint_DMFT
+
 end
 
 """
