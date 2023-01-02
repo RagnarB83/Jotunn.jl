@@ -1,7 +1,7 @@
 BUGS and CLEANUP:
 - Proper Hcore guess for UHF/UKS. Lithium problem.
 - d-functions complete, f-functions and beyond TODO
-- print minimal basis specification: primitive list
+
 - print basis set order also
 - Print full basis set option
 - Implement density gradient, sigma, including dAO so that we can have GGA functionals
@@ -9,7 +9,6 @@ BUGS and CLEANUP:
 - Cleanup NonHybridDFT_RKS (comment out and multiply)
 - DIIS: better throwout-vector scheme
 - Unify DIIS, Damping and Levelshift switching
-
 
 FEATURES
 - Parallelize Fock with threading

@@ -337,8 +337,38 @@ function create_bf_shell_map(bset)
     return bf_atom_shell_mapping
 end
 
-
-
+"""
+get_basis_composition: could be used to print primitive composition
+"""
+function get_basis_composition(bset)
+    #Basis set composition dicts per atom index
+    BFs_contracted_dict=Dict{Int64,Vector{Any}}()
+    BFs_primitives_dict=Dict{Int64,Vector{Any}}()
+    basis_func_angmoms=[]; basis_func_prims=[]
+    #Looping over shells
+    atom_ind=1 #atom-index counter
+    shellcounter=0 #shell-index counter that is reset
+    for shell in bset.basis
+        shellcounter+=1
+        #if shell index larger than shells per atom
+        if shellcounter > bset.shells_per_atom[atom_ind]
+            BFs_contracted_dict[atom_ind] = basis_func_angmoms
+            BFs_primitives_dict[atom_ind] = basis_func_prims
+            atom_ind+=1 #new atom
+            shellcounter=1 #resetting shell counter
+            basis_func_prims=[]
+            basis_func_angmoms=[]
+        end
+        push!(basis_func_angmoms,shell.l)
+        for i in range(1,length(shell.exp))
+            push!(basis_func_prims,shell.l)
+        end
+    end
+    #Last item
+    BFs_contracted_dict[atom_ind] = basis_func_angmoms
+    BFs_primitives_dict[atom_ind] = basis_func_prims
+    return BFs_contracted_dict,BFs_primitives_dict
+end
 
 
 """

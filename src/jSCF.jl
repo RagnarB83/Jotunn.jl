@@ -43,14 +43,12 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
     bf_atom_shell_map=create_bf_shell_map(bset)
     #Simple array of atom indices that maps onto bfs
     bset_atom_mapping = [j[1] for j in bf_atom_shell_map]
-    
     # Create array of l and ml values
     mlvalues=create_ml_values(bset)
     #lvalues=create_l_values(bset)
     lvalues = [bset.basis[i].l for i in 1:9]
     #Print basis set information here
     if printlevel >0
-        #println("No. contracted basis functions: $dim")
         println(GaussianBasis.string_repr(bset))
     end
 
@@ -71,7 +69,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
         if WFtype=="RKS" WFtype="UKS" end
     end
 
-    #RHF vs. UHF
+    #Calculation setup for RHF vs. UHF vs. RKS vs. UKS
     if WFtype == "RHF"
         #Num occ orbitals in RHF
         numoccorbs=Int64(num_el/2)
@@ -110,7 +108,6 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
             println("Error: Both functional and libxc_keyword can not be used. Exiting.")
             exit()
         end
-
         println("Calling choose_functional")
         libxc_functional,func_rung, manual_option = choose_functional(functional,libxc_keyword)
         #Non-hybrid
@@ -155,9 +152,6 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
             functional_rung=func_rung)
             Intobj=Jint_hybridKS
         end
-
-
-
         #TODO: broken-symmetry spin-coupled case
     elseif WFtype == "UHF"
         unpaired_electrons= fragment.mult - 1
