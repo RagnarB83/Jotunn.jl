@@ -46,7 +46,12 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
     # Create array of l and ml values
     mlvalues=create_ml_values(bset)
     #lvalues=create_l_values(bset)
-    lvalues = [bset.basis[i].l for i in 1:9]
+    #println("Here")
+    #for i in 1:9
+    #    println("set.basis[i]:", bset.basis[i])
+    #    println("bset.basis[i].l:", bset.basis[i].l)
+    #end
+    lvalues = [bset.basis[i].l for i in 1:bset.nshells]
     #Print basis set information here
     if printlevel >0
         println(GaussianBasis.string_repr(bset))
@@ -264,7 +269,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
             P = makeP2(C, dim, numoccorbs, orb_occupations) #Calculate new P from C
             #println("P2:", P2)
             println("Initial orb_occupations: ", orb_occupations)
-            println("Initial P: ", P)
+            #println("Initial P: ", P)
         elseif WFtype=="UHF" || WFtype=="UKS"
             #UHF or UKS
             #A=zeros(dim,dim)
@@ -461,7 +466,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
             finaliter=iter
             if printlevel > 0
                 if WFtype == "RHF" || WFtype == "RKS"
-                    print_energy_contributions(energy,Hcore,P,T,E_ZZ,integrals.E_xc)
+                    print_energy_contributions(energy,Hcore,P,T,E_ZZ,integrals.E_xc,V,num_el)
                     #Printing of matrices if requested. 
                     if print_final_matrices == true 
                         write_matrix_to_file(F,"Fmatrix")
@@ -469,7 +474,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
                         write_matrix_to_file(P,"Pmatrix")
                     end
                 else
-                    print_energy_contributions(energy,Hcore,P,T,E_ZZ,integrals.E_xc)
+                    print_energy_contributions(energy,Hcore,P,T,E_ZZ,integrals.E_xc,V,num_el)
                     if print_final_matrices == true 
                         write_matrix_to_file(P,"Pmatrix")
                         write_matrix_to_file(C_⍺,"C_a_matrix")

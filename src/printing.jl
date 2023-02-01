@@ -151,13 +151,21 @@ end
 """
 print_energy_contributions: Print energy contributions if SCF converged
 """
-function print_energy_contributions(energy,Hcore,P,T,E_ZZ,E_xc)
+function print_energy_contributions(energy,Hcore,P,T,E_ZZ,E_xc,V,num_el)
     one_elec_E=tr(Hcore*P)
     #two_elec_E=0.5*tr((F-Hcore)*P) Only applicable to HF
     two_elec_E=energy-one_elec_E
     kin_energy=tr(T*P)
+    #nuc_elec_energy=tr(V*P)
     pot_energy=energy-kin_energy
     virial_ratio=-pot_energy/kin_energy
+    #Average electron energy, Rahm, JCTC 2023
+    #J_e=two_elec_E-E_xc
+    #println("J_e:", J_e)
+    #ave_el_energy = -1*(1/num_el)*(kin_energy+nuc_elec_energy+2*(J_e + E_xc))
+    #println("Mean elec. energy (Eh): ", ave_el_energy)
+    #println("Mean elec. energy (eV): ", 27.211399*ave_el_energy)
+    #println("E_ZZ:", E_ZZ)
     energies=[energy,E_ZZ,energy-E_ZZ,one_elec_E,two_elec_E,kin_energy,pot_energy,virial_ratio]
     labels=["Total energy","Nuclear repulsion","Electronic energy","1-electron energy","2-electron energy",
         "Kinetic energy","Potential energy","Virial ratio"]
