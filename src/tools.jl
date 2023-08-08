@@ -55,6 +55,8 @@ function makeP2(C, dim, Norb,nocc)
 end
 
 
+
+
 """
 makeoccupationarray: Create array of occupation numbers
 """

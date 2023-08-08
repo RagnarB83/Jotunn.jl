@@ -472,6 +472,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
                         write_matrix_to_file(F,"Fmatrix")
                         write_matrix_to_file(C,"Cmatrix")
                         write_matrix_to_file(P,"Pmatrix")
+                        write_matrix_to_file(S,"Smatrix")
                     end
                 else
                     print_energy_contributions(energy,Hcore,P,T,E_ZZ,integrals.E_xc,V,num_el)
