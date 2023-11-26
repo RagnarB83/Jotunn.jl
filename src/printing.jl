@@ -131,6 +131,9 @@ function iteration_printing(iter,printlevel,energy,deltaE,energythreshold,P_RMS,
         rms_comm = sqrt(sum(x -> x*x, FP_comm) / length(FP_comm))
         println("RMS[F,P]: ", rms_comm)
     elseif printlevel == 1
+        levelshiftflag=Int(levelshiftflag)
+        damping_flag=Int(damping_flag)
+        diis_flag=Int(diis_flag)
         #Minimal printing
         #@printf("%6d %17.10f %17.10f %17.10f %17.10f %10s %10s\n", iter, energy, deltaE,P_RMS,P_MaxE,levelshiftflag, "no")
         #Note: Crayon output might add ~1-1.5 sec in total per 70 iterations

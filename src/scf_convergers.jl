@@ -107,7 +107,7 @@ function diis_control(diisobj,F′,energy,FP_comm,iter,printlevel)
             push!(diisobj.maxerrors,max_diis_err)
             push!(diisobj.rmserrors,rms_diis_err)
         end
-        println("DIIS current size:", length(diisobj.errorvectors))
+        #println("DIIS current size:", length(diisobj.errorvectors))
         #else
         #    print_if_level("DIIS has not yet reached diis_startiter=$(diisobj.diis_startiter). Not storing data.",2,printlevel)
         #end
@@ -174,7 +174,7 @@ function diis_control(diisobj,F′,energy,FP_comm,iter,printlevel)
                 return F′
             end
         else
-            println("DIIS active but startiter not yet reached. No extrapolation yet (only storing).")
+            #println("DIIS active but startiter not yet reached. No extrapolation yet (only storing).")
             return F′
         end
     else

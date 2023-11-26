@@ -5,7 +5,7 @@ export jSCF
 jSCF: the Jotunn SCF program (RHF,UHF,RKS,UKS)
 
 """
-function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", 
+function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF", scf_mode="conventional",
     functional::String="none", libxc_keyword::String="none", manual_func::String="none",
     guess::String="hcore", basisfile::String="none", maxiter::Int64=120, 
     print_final_matrices::Bool=false, rmsDP_threshold::Float64=5e-9, maxDP_threshold::Float64=1e-7, 
@@ -43,6 +43,7 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
     bf_atom_shell_map=create_bf_shell_map(bset)
     #Simple array of atom indices that maps onto bfs
     bset_atom_mapping = [j[1] for j in bf_atom_shell_map]
+
     # Create array of l and ml values
     mlvalues=create_ml_values(bset)
     #lvalues=create_l_values(bset)
@@ -84,7 +85,11 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
         unpaired_electrons=0
         DFTobj=nothing
         grid=false
-        Intobj=Jint_HF
+        if scf_mode == "direct"
+            Intobj=Jint_HF_direct
+        else
+            Intobj=Jint_HF
+        end
     elseif WFtype == "i-DMFT"
         #Num occ orbitals in RHF
         numoccorbs=Int64(num_el/2)
@@ -199,26 +204,45 @@ function jSCF(fragment, basisset="sto-3g"; WFtype::String="RHF",
     SVAL_minhalf = Diagonal(Sval)^-0.5
     Stemp = SVAL_minhalf*transpose(Svec)
     S_minhalf = Svec * Stemp
-    print_if_level("Calculating 2-electron integrals (tei_type: $tei_type)",1,printlevel)
-    #Calculating two-electron integrals: tei_type: 4c, sparse4c
-    time_tei=@elapsed tei = tei_calc(bset,tei_type,printlevel)
-    print_if_level("Time calculating 2-electron integrals: $time_tei",1,printlevel)
+    if scf_mode == "conventional"
+        println("SCF mode is conventional")
+        print_if_level("Calculating 2-electron integrals (tei_type: $tei_type)",1,printlevel)
+        #Calculating two-electron integrals: tei_type: 4c, sparse4c
+        time_tei=@elapsed tei = tei_calc(bset,tei_type,printlevel)
+        print_if_level("Time calculating 2-electron integrals: $time_tei",1,printlevel)
 
-    #Creating Integrals object (contains Hcore, TEI and basis set)
-    if tei_type == "sparse4c"
-        #Note: Takes 0.10-0.13 s for C16 RHF/STO-3G
-        #due to list comprehension, speed up?
-        integrals = Intobj(Hcore=Hcore,S=S, S_minhalf=S_minhalf, unique_indices=[i .+ 1 for i in tei[1]],
-            values=tei[2], length=length(tei[2]),bset=bset,bset_atom_mapping=bset_atom_mapping,
-            bf_atom_shell_map=bf_atom_shell_map,DFT=DFTobj, mlvalues=mlvalues, lvalues=lvalues)
-        fock_algorithm="loop-sparse" #Only a string for printing
+        #Creating Integrals object (contains Hcore, TEI and basis set)
+        if tei_type == "sparse4c"
+            #Note: Takes 0.10-0.13 s for C16 RHF/STO-3G
+            #due to list comprehension, speed up?
+            println("[i .+ 1 for i in tei[1]]:", [i .+ 1 for i in tei[1]])
+            integrals = Intobj(Hcore=Hcore,S=S, S_minhalf=S_minhalf, unique_indices=[i .+ 1 for i in tei[1]],
+                values=tei[2], length=length(tei[2]),bset=bset,bset_atom_mapping=bset_atom_mapping,
+                bf_atom_shell_map=bf_atom_shell_map,DFT=DFTobj, mlvalues=mlvalues, lvalues=lvalues)
+            fock_algorithm="loop-sparse" #Only a string for printing
+        elseif tei_type == "4c"
+            #To be deleted. Only kept on for RHF comparison
+            integrals = Jint_4rank(Hcore=Hcore,tensor=tei,bset=bset,bset_atom_mapping=bset_atom_mapping,
+            bf_atom_shell_map=bf_atom_shell_map, mlvalues=mlvalues, lvalues=lvalues)
+            fock_algorithm="loop-4rank" #Only a string for printing
+        end
     else
-        #To be deleted. Only kept on for RHF comparison
-        integrals = Jint_4rank(Hcore=Hcore,tensor=tei,bset=bset,bset_atom_mapping=bset_atom_mapping,
-        bf_atom_shell_map=bf_atom_shell_map, mlvalues=mlvalues, lvalues=lvalues)
-        fock_algorithm="loop-4rank" #Only a string for printing
-    end
+        println("SCF mode is direct")        
+        println("bset:", bset)
+        println("bset numshells:", bset.nshells)
+        println("bf_atom_shell_map:",bf_atom_shell_map)
+        println("bset_atom_mapping:",bset_atom_mapping)
 
+        #Unique indices
+        unique_indices = []
+
+        #Creating integrals object for direct SCF (only contains pre-calculated Hcore and S)
+        integrals = Intobj(Hcore=Hcore,S=S, S_minhalf=S_minhalf, bset=bset,bset_atom_mapping=bset_atom_mapping,
+            bf_atom_shell_map=bf_atom_shell_map,DFT=DFTobj, mlvalues=mlvalues, lvalues=lvalues,unique_indices=unique_indices)
+        fock_algorithm="direct_loop-sparse" #Only a string for printing
+        println("integrals object done")
+    end
+    
     #############################
     # CREATING GRID
     #############################
@@ -662,6 +686,38 @@ Base.@kwdef mutable struct Jint_HF
     DFT::Nothing
     E_xc::Float64=0.0
 end
+
+"""
+Jint_HF_direct: Jotunn integral struct in sparse form for RHF/UHF. DIRECT
+"""
+Base.@kwdef mutable struct Jint_HF_direct
+    #1-electron integrals
+    Hcore::Matrix{Float64}
+    S::Matrix{Float64}
+    S_minhalf::Matrix{Float64}
+    #TWO-electron integrals
+    #Original unique list of integral indices from GaussianBasis but with 1-indexing
+    unique_indices::Vector{NTuple{4, Int16}}=[]
+    #Integral values
+    #values::Vector{Float64}=[]
+    length::Int64=0
+    #Basis set object and data
+    bset::BasisSet
+    bset_atom_mapping::Vector{Int64}
+    bf_atom_shell_map::Vector{Tuple{Int64, Int64}}
+    mlvalues::Vector{Int64}
+    lvalues::Vector{Int64}
+    #Gridpoints (used for density generation in HF)
+    gridpoints::Vector{Tuple{Float64, Float64, Float64}}=[]
+    gridweights::Vector{Float64}=[]
+    #Pre-calculated basis function values at gridpoints
+    BFvalues::Array{Float64}=[]
+    ∇BFvalues::Array{Float64}=[] #derivative of BF values at gridpoints
+    #
+    DFT::Nothing
+    E_xc::Float64=0.0
+end
+
 
 """
 Jint_KS: Jotunn integral struct in sparse form
